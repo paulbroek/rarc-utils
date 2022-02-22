@@ -12,6 +12,7 @@ requires = [
     "tqdm>=4.62.1",
     "psutil>=5.8.0",
     "sqlalchemy>=1.4.23"
+    "PyYAML>=5.4.1"
 ]
 
 setup(
