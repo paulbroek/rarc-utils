@@ -6,7 +6,7 @@
 """
 
 from typing import Dict, Any # List, 
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod # , ABC
 import logging
 import asyncio
 from pprint import pprint
@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.future import select
 
+from .misc import AttrDict
+
 logger = logging.getLogger(__name__)
 
 # Base = declarative_base()
@@ -26,10 +28,10 @@ logger = logging.getLogger(__name__)
 class UtilityBase(object):
     """ adds helper methods to SQLAlchemy `Base` class """
 
-    def as_dict(self):
+    def as_dict(self) -> Dict[str, Any]:
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}  
 
-    def as_big_dict(self):
+    def as_big_dict(self) -> Dict[str, Any]:
         return {c: getattr(self, c) for c in dir(self) if not c.startswith(('_','__','registry'))}
  
 class AbstractBase(metaclass=ABCMeta): # ABC
@@ -42,7 +44,7 @@ class AbstractBase(metaclass=ABCMeta): # ABC
         """
         pass
 
-async def async_main(psql, base, dropFirst=False) -> None:
+async def async_main(psql, base, force=False, dropFirst=False) -> None:
     engine = create_async_engine(
         f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
         echo=True,
@@ -50,19 +52,19 @@ async def async_main(psql, base, dropFirst=False) -> None:
 
     """ TO-DO: make sure to check for a backup file first, as it deletes all psql data """
 
-    input_ = input("are you sure you want to recreate all models? Use alembic for migrations, and run this function only for a total model reset. Pres 'y' to confirm: ")
-    if input_ != 'y':
-        print("leaving")
-        return 
+    if not force:
+        if input("are you sure you want to recreate all models? Use alembic for migrations, and run this function only for a total model reset. Pres 'y' to confirm: ") != 'y':
+            print("leaving")
+            return 
 
     if dropFirst:
         async with engine.begin() as conn:
-            await conn.run_sync(base.metadata.drop_all)
+            await conn.run_sync(base.metadata.drop_all) # does not work with association tables.. --> use DROP DATABASE "enabler"; CREATE DATABASE "enabler"; for now
 
     async with engine.begin() as conn:
         await conn.run_sync(base.metadata.create_all)
 
-def get_session(psql):
+def get_session(psql: AttrDict) -> sessionmaker:
     """ create normal (bocking) connection """
 
     engine = create_engine(
@@ -79,7 +81,7 @@ def get_session(psql):
 
     return session
 
-def get_async_session(psql):
+def get_async_session(psql: AttrDict) -> sessionmaker:
     engine = create_async_engine(
         f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
         echo=False,  # shows double log output
@@ -94,7 +96,7 @@ def get_async_session(psql):
 
     return async_session
 
-async def aget_str_mappings(psql, models=None) -> Dict[str, Any]:
+async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
 
     assert models is not None
 
@@ -124,7 +126,7 @@ def get_str_mappings(session: Session, models=None) -> Dict[str, Any]:
 
     return str_mappings
 
-def get_or_create(session, model, item=None, **kwargs):
+def get_or_create(session: Session, model, item=None, **kwargs):
 
     if item is not None:
         kwargs = item.as_dict()
