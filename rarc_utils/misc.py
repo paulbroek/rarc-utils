@@ -9,7 +9,7 @@ import traceback
 import hashlib
 import uuid
 import importlib
-from time import time, time_ns
+from time import time, time_ns, sleep
 import os
 from datetime import datetime
 import logging
@@ -475,11 +475,21 @@ def loadConfig(configFile=None):
 
     return config
 
-def getPublicIP(url='https://api.ipify.org') -> Optional[str]:
+def getPublicIP(url='https://api.ipify.org', n=0, max_retry=5) -> Optional[str]:
 
     try:
         res = requests.get(url)
-        return res.content.decode('utf8')
+        res = res.content.decode('utf8')
+
+        # retry if result is html page instead of host url, max 5 retries
+        if len(res) > 25 and n < max_retry:
+            n += 1
+            sleep(0.2)
+            return getPublicIP(url, n=n)
+
+        if n > 0:
+            logger.warning(f'{n} retries')
+        return res
 
     except Exception as e:
         logger.error(f'cannot fetch public IP from API. {str(e)=}')
