@@ -17,7 +17,7 @@ requires = [
 
 setup(
     name='rarc_utils',
-    #version='0.0.2',
+    version='0.0.4',
     description='Rarc utility functions',
     url='git@github.com:paulbroek/rarc-utils.git',
     author='Paul Broek',
