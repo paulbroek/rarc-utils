@@ -494,8 +494,6 @@ def getPublicIP(url='https://api.ipify.org', n=0, max_retry=5) -> Optional[str]:
     except Exception as e:
         logger.error(f'cannot fetch public IP from API. {str(e)=}')
 
-    return None
-
 def get_key_or_none(d: Optional[dict], key: str) -> Optional[Any]:
     if isinstance(d, dict):
         return d.get(key, None)
