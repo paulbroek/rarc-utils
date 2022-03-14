@@ -47,8 +47,14 @@ class MsgCountHandler(logging.Handler):
             self.__df = df
 
     @property
-    def levelCount(self) -> Dict:
-        return dict(self.__levelCount)
+    def levelCount(self) -> Dict[str, int]:
+        lc = dict(self.__levelCount)
+        # add total field
+        lc['total'] = 0
+        if len(lc) > 0:
+            lc['TOTAL'] = sum(lc.values())
+
+        return lc
 
     @property
     def df(self) -> pd.DataFrame:
