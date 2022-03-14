@@ -6,7 +6,7 @@
 
 import logging
 from datetime import datetime
-import importlib
+# import importlib
 import sys
 import re
 from typing import Dict
@@ -24,7 +24,7 @@ class MsgCountHandler(logging.Handler):
     """ Counts number of log calls per level type 
         Additionally alsos store every emitted message to a dataframe, for later inspection
     """
-    #levelCount = None
+    # levelCount = None
 
     def __init__(self, *args, savePandas=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -68,7 +68,7 @@ class MsgCountHandler(logging.Handler):
         self.__levelCount[record.levelname] += 1
         if self.__df is not None:
             dt = datetime.fromtimestamp(record.created)
-            #print(f"{record.asctime=} {dt=} {dir(record)=}")
+            # print(f"{record.asctime=} {dt=} {dir(record)=}")
             new_row = pd.DataFrame([[record.name, record.levelname, record.funcName, record.lineno]], columns=self._df_cols, index=[dt])
             self.df = pd.concat([self.__df, new_row], ignore_index=False)
 
@@ -76,7 +76,7 @@ class MultiLineFormatter1(logging.Formatter):
     """ format multiline log message with same indentation """
 
     def format(self, record):
-        #print('using format')
+        # print('using format')
         message = record.msg
         record.msg = ''
         header = super().format(record)
@@ -112,14 +112,14 @@ class MultiLineFormatter2(logging.Formatter):
         # Other message types like list or bytes won't be touched
         if isinstance(message, str):
             # wrap text into fixed width block
-            #msgs = '\n'.join()
-            #msgs = textwrap.wrap(message, width=self.width, replace_whitespace=False, subsequent_indent='  ') # default subsequent_indent == ''
-            #msgs = msgs.splitlines(True)
+            # msgs = '\n'.join()
+            # msgs = textwrap.wrap(message, width=self.width, replace_whitespace=False, subsequent_indent='  ') # default subsequent_indent == ''
+            # msgs = msgs.splitlines(True)
             texts = message.split('\n')
             # I use itertools to repeatedly wrap the sub texts, this is the only to honour any '\n' in a log message
             msgs = list(chain(*[textwrap.wrap(t, width=self.width, subsequent_indent='  ')  for t in texts]))
             msgs = [f'{msg}\n' if i != len(msgs) else msg for i,msg in enumerate(msgs, start=1)]
-            #print(f'{msgs=}')
+            # print(f'{msgs=}')
             if len(msgs) > 1:
                 self.header_len = header_len = self.get_header_length(record)
 
@@ -149,16 +149,16 @@ def set_log_level(logger, fmt, level=logging.DEBUG):
 def add_log_level(name: str, level: int) -> None: 
     """ log level 'name' will be added to all logger, instantiated from logging.getLogger () """
 
-    #logging.URGENT = level
+    # logging.URGENT = level
     setattr(logging, name, level)
     newLevelAttr = getattr(logging, name)
     logging.addLevelName(newLevelAttr, name)
-    #logging.Logger.urgent = partialmethod(logging.Logger.log, newLevelAttr)
+    # logging.Logger.urgent = partialmethod(logging.Logger.log, newLevelAttr)
     setattr(logging.Logger, name.lower(), partialmethod(logging.Logger.log, newLevelAttr))
-    #logging.urgent = partial(logging.log, logging.URGENT)
+    # logging.urgent = partial(logging.log, logging.URGENT)
     setattr(logging, name.lower(), partial(logging.log, newLevelAttr))
 
-    #return logging
+    # return logging
 
 class Empty(object):
     """An empty class used to copy :class:`~logging.LogRecord` objects without reinitializing them."""
@@ -189,7 +189,7 @@ def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INF
 
     console_handler = logging.StreamHandler()
     # create formatter
-    #formatter = logging.Formatter("%(asctime)s - %(name)10s - %(levelname)6s - %(message)s")
+    # formatter = logging.Formatter("%(asctime)s - %(name)10s - %(levelname)6s - %(message)s")
     if not multiLine:
         console_formatter = logging.Formatter(fmt)   # same width for module and levelname
     else:
@@ -214,7 +214,7 @@ def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INF
     logger.addHandler(console_handler)
 
     # last try: monkey patch the format method to the colored logs stream handler formatter?
-    #myformatter = MultiLineFormatter2(80, fmt=fmt)
+    # myformatter = MultiLineFormatter2(80, fmt=fmt)
     myformatter = console_formatter
     # needed for monkeypatching this into coloredlogs ColoredFormatter
     def myformat(self, record):
@@ -230,12 +230,12 @@ def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INF
         
         # was:
         # return logging.Formatter.format(self, record)
-        #print(f'{record=}')
-        #return myformatter.format(self, record)
+        # print(f'{record=}')
+        # return myformatter.format(self, record)
         return MultiLineFormatter2.format(self, record)
 
     # todo: monkey-patch it into the module
-    #coloredlogs.ColoredFormatter.format = myformat
+    # coloredlogs.ColoredFormatter.format = myformat
 
     # todo: coloredlogs removes all handlers, also MultiLineFormatter, how to have both functioning?
     # solution: set formatter AFTER installing coloredlogs
@@ -248,7 +248,7 @@ def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INF
     assert issubclass((tsh := type(stream_handler)), logging.StreamHandler), f"{tsh=} is not logging.StreamHandler"  # coloredlogs StreamHandler inherits from logging.StreamHandler, so this is a good safety check
 
     # pff, coloredlogs returns a new Formatter, so this hack does not work either
-    #stream_handler.setFormatter(console_formatter)
+    # stream_handler.setFormatter(console_formatter)
 
     return logger
 
@@ -260,11 +260,11 @@ def setupCCXTTradeLogger(LOG_FILE, session_id, useFluent=1, saveRotatingFile=1, 
 
     assert not(saveRotatingFile and saveFile)
 
-    #def setup():
+    # def setup():
     # ugly code, don't reset logger in this way
-    #import logging
-    #logging.shutdown()
-    #importlib.reload(logging)
+    # import logging
+    # logging.shutdown()
+    # importlib.reload(logging)
     if addUrgent:
         add_log_level('URGENT', 25)
 
@@ -320,7 +320,7 @@ def setupCCXTTradeLogger(LOG_FILE, session_id, useFluent=1, saveRotatingFile=1, 
 
     handlers += [console_handler]
 
-    #handlers += [MsgCountHandler(savePandas=savePandas)]
+    # handlers += [MsgCountHandler(savePandas=savePandas)]
 
     logging.basicConfig(format=fmt, level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S', handlers=handlers)  #  INFO
 
@@ -333,9 +333,9 @@ def setupCCXTTradeLogger(LOG_FILE, session_id, useFluent=1, saveRotatingFile=1, 
     stream_handler = logger.handlers[-1]
     assert issubclass((tsh := type(stream_handler)), logging.StreamHandler), f"{tsh=} is not logging.StreamHandler. {logger.handlers=}"  # coloredlogs StreamHandler inherits from logging.StreamHandler, so this is a good safety check
 
-    #logger.handlers[-1].setFormatter(formatter)
-    #stream_handler.setFormatter(formatter)
+    # logger.handlers[-1].setFormatter(formatter)
+    # stream_handler.setFormatter(formatter)
 
     return logger
 
-    #return setup
+    # return setup
