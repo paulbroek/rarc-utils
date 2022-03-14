@@ -199,18 +199,6 @@ def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INF
         console_formatter = MultiLineFormatter2(msgWidth, fmt=fmt)
     # add formatter to ch
 
-    if jsonLogger:
-        # overwrite console_formatter, so use jsonLogger only inside Docker
-        print(f"using jsonLogger")
-
-        def json_translate(obj):
-            # if isinstance(obj, MyClass):
-            #     return {"special": obj.special}
-            pass
-
-        console_formatter = jsonlogger.JsonFormatter(json_default=json_translate,
-                                     json_encoder=json.JSONEncoder)
-
     console_handler.setFormatter(console_formatter)
 
     # save errors to file (or slack/rabbitmq)
@@ -227,6 +215,28 @@ def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INF
 
     logger.addHandler(MsgCountHandler(savePandas=savePandas))
     logger.addHandler(console_handler)
+
+    if jsonLogger:
+        # overwrite console_formatter, so use jsonLogger only inside Docker
+        logger.warning(f"using jsonLogger")
+
+        def json_translate(obj):
+            # if isinstance(obj, MyClass):
+            #     return {"special": obj.special}
+            pass
+
+        # format_str = '%(message)%(levelname)%(filename)%(asctime)%(funcName)%(lineno)'
+        format_str = fmt # use same format as console_handler
+        json_formatter = jsonlogger.JsonFormatter(format_str, json_default=json_translate,
+                                     json_encoder=json.JSONEncoder)
+
+        json_file_handler = logging.FileHandler('json_lines.log' , mode='w') # mode='a'
+        json_file_handler.setLevel(logging.DEBUG) # save all messages, filtering can happen later
+        json_file_handler.setFormatter(json_formatter)
+        # json_stream_handler = logging.StreamHandler()
+        # json_stream_handler.setFormatter(json_formatter)
+
+        logger.addHandler(json_file_handler)
 
     # last try: monkey patch the format method to the colored logs stream handler formatter?
     # myformatter = MultiLineFormatter2(80, fmt=fmt)
