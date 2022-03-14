@@ -16,6 +16,8 @@ import copy
 from itertools import chain
 from functools import partial, partialmethod
 import coloredlogs
+from pythonjsonlogger import jsonlogger
+import json
 
 import pandas as pd
 import numpy as np
@@ -170,7 +172,7 @@ from humanfriendly.terminal import ANSI_COLOR_CODES, ansi_wrap
 # log_fmt = "%(asctime)s - %(name)-10s - %(lineno)5s - %(funcName)-10s - %(levelname)6s - %(message)s"
 # logger = log.setup_logger(cmdLevel=getattr(logging, verbosity), brokers=brokers, save_to_file=1, savePandas=1, fmt=log_fmt)
 def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INFO, saveFile=False, savePandas=False, addUrgent=1, \
-                fmt="%(asctime)s - %(name)10s - %(funcName)-19s - %(levelname)6s - %(message)s", multiLine=False, msgWidth=80, color=False):
+                fmt="%(asctime)s - %(name)10s - %(funcName)-19s - %(levelname)6s - %(message)s", jsonLogger=False, multiLine=False, msgWidth=80, color=False):
     """ see https://docs.python.org/2/library/logging.html#logrecord-attributes
         for a list of LogRecord attributes
     """
@@ -196,6 +198,19 @@ def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INF
         #console_formatter = MultiLineFormatter1(msgWidth)
         console_formatter = MultiLineFormatter2(msgWidth, fmt=fmt)
     # add formatter to ch
+
+    if jsonLogger:
+        # overwrite console_formatter, so use jsonLogger only inside Docker
+        print(f"using jsonLogger")
+
+        def json_translate(obj):
+            # if isinstance(obj, MyClass):
+            #     return {"special": obj.special}
+            pass
+
+        console_formatter = jsonlogger.JsonFormatter(json_default=json_translate,
+                                     json_encoder=json.JSONEncoder)
+
     console_handler.setFormatter(console_formatter)
 
     # save errors to file (or slack/rabbitmq)
