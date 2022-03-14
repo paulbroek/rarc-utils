@@ -4,12 +4,13 @@
     supports: indented formatting, colored formatting, save to file, save all log records to pandas, and more
 """
 
+from typing import List, Dict, Any
 import logging
 from datetime import datetime
 # import importlib
+import os
 import sys
 import re
-from typing import Dict
 from collections import defaultdict
 import textwrap
 import copy
@@ -168,6 +169,30 @@ class Empty(object):
 from humanfriendly.compat import coerce_string
 from humanfriendly.terminal import ANSI_COLOR_CODES, ansi_wrap
 
+def read_json_log_redis(uuid: str, key='json_logs', rs=None) -> List[Dict[str, Any]]:
+
+    assert rs is not None
+    res = rs.hget(key, uuid)
+    assert res is not None, f"cannot find log {uuid}, try different uuid"
+    lines = json.loads(res)
+
+    return lines
+
+def read_json_log_file(log_file: str) -> List[Dict[str, Any]]:
+    """ read json log file, every line contains a json log message """
+
+    renameDict = dict(message='msg')
+
+    lines = []
+    with open(log_file) as f:
+        for line in f:
+            d = json.loads(line)
+            for k_old, k_new in renameDict.items():
+                d[k_new] = d.pop(k_old)
+            lines.append(d)
+
+    return lines
+
 # logger = log.setup_logger(cmdLevel=getattr(logging, verbosity), brokers=brokers, save_to_file=1, savePandas=1, fmt=)
 # log_fmt = "%(asctime)s - %(name)-10s - %(lineno)5s - %(funcName)-10s - %(levelname)6s - %(message)s"
 # logger = log.setup_logger(cmdLevel=getattr(logging, verbosity), brokers=brokers, save_to_file=1, savePandas=1, fmt=log_fmt)
@@ -216,28 +241,6 @@ def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INF
     logger.addHandler(MsgCountHandler(savePandas=savePandas))
     logger.addHandler(console_handler)
 
-    if jsonLogger:
-        # overwrite console_formatter, so use jsonLogger only inside Docker
-        logger.warning(f"using jsonLogger")
-
-        def json_translate(obj):
-            # if isinstance(obj, MyClass):
-            #     return {"special": obj.special}
-            pass
-
-        # format_str = '%(message)%(levelname)%(filename)%(asctime)%(funcName)%(lineno)'
-        format_str = fmt # use same format as console_handler
-        json_formatter = jsonlogger.JsonFormatter(format_str, json_default=json_translate,
-                                     json_encoder=json.JSONEncoder)
-
-        json_file_handler = logging.FileHandler('json_lines.log' , mode='w') # mode='a'
-        json_file_handler.setLevel(logging.DEBUG) # save all messages, filtering can happen later
-        json_file_handler.setFormatter(json_formatter)
-        # json_stream_handler = logging.StreamHandler()
-        # json_stream_handler.setFormatter(json_formatter)
-
-        logger.addHandler(json_file_handler)
-
     # last try: monkey patch the format method to the colored logs stream handler formatter?
     # myformatter = MultiLineFormatter2(80, fmt=fmt)
     myformatter = console_formatter
@@ -267,6 +270,31 @@ def setup_logger(cmdLevel=logging.INFO, brokers=(), saveFileLogLevel=logging.INF
     if color:
         coloredlogs.install(reconfigure=1, logger=logger, level=cmdLevel, fmt=fmt, milliseconds=1)
         logger.warning('using colored logs')
+
+    if jsonLogger:
+        # overwrite console_formatter, so use jsonLogger only inside Docker
+        cwd = os.getcwd()
+        json_file_dir = cwd + '/json_lines.log'
+        logger.json_file_dir = json_file_dir
+        logger.warning(f"using jsonLogger. {json_file_dir=}")
+
+        def json_translate(obj):
+            # if isinstance(obj, MyClass):
+            #     return {"special": obj.special}
+            pass
+
+        # format_str = '%(message)%(levelname)%(filename)%(asctime)%(funcName)%(lineno)'
+        format_str = fmt # use same format as console_handler
+        json_formatter = jsonlogger.JsonFormatter(format_str, json_default=json_translate,
+                                     json_encoder=json.JSONEncoder)
+
+        json_file_handler = logging.FileHandler(json_file_dir , mode='w') # mode='a'
+        json_file_handler.setLevel(logging.DEBUG) # save all messages, filtering can happen later
+        json_file_handler.setFormatter(json_formatter)
+        # json_stream_handler = logging.StreamHandler()
+        # json_stream_handler.setFormatter(json_formatter)
+
+        logger.addHandler(json_file_handler)
 
     # assuming console_handler is the last handler!
     stream_handler = logger.handlers[-1]
