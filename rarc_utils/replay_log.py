@@ -111,9 +111,7 @@ if __name__ == "__main__":
 
         if how == 'REDIS':
             # get last logs per broker, instrument from postgres, and let user select what log file to load
-            df = get_last_log_sessions()
-
-            item = select_log_session(df)
+            item = select_log_session(get_last_log_sessions())
             uuid = item.log_id
 
         elif how == 'UUID':
