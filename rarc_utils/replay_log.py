@@ -14,16 +14,29 @@
 from typing import List
 import argparse
 import logging
+import configparser
+from pathlib import Path
 
 import redis
 from rarc.config.redis import redis as rk
+import rarc.config.redis
 from rarc_utils.log import setup_logger, read_json_log_file, read_json_log_redis
+from rarc_utils.misc import AttrDict
+from rarc_utils.sqlalchemy import get_session
 
 log_fmt = "%(asctime)s - %(module)-16s - %(lineno)-4s - %(funcName)-16s - %(levelname)-7s - %(message)s"  # name
 logger = setup_logger(cmdLevel=logging.INFO, saveFile=0, savePandas=1, jsonLogger=0, color=1, fmt=log_fmt) # URGENT WARNING
 log_file = 'json_lines.log'
 log_handler = logger.handlers[-1] # last handler is colored logs console handler
 
+# ugly way of retrieving postgres cfg file
+p = Path(rarc.config.redis.__file__)
+p.with_name('aatPostgres.cfg')
+cfgFile = p.with_name('aatPostgres.cfg')
+parser  = configparser.ConfigParser()
+parser.read(cfgFile)
+psql  = AttrDict(parser['psql'])
+psession = get_session(psql)()
 
 if __name__ == "__main__":
 
