@@ -4,7 +4,7 @@
     supports: indented formatting, colored formatting, save to file, save all log records to pandas, and more
 """
 
-from typing import List, Dict, Any
+from typing import List, Tuple, Dict, Any
 import logging
 from datetime import datetime
 # import importlib
@@ -16,9 +16,10 @@ import textwrap
 import copy
 from itertools import chain
 from functools import partial, partialmethod
+import json
+
 import coloredlogs
 from pythonjsonlogger import jsonlogger
-import json
 
 import pandas as pd
 import numpy as np
@@ -27,8 +28,7 @@ class MsgCountHandler(logging.Handler):
     """ Counts number of log calls per level type 
         Additionally alsos store every emitted message to a dataframe, for later inspection
     """
-    # levelCount = None
-
+    
     def __init__(self, *args, savePandas=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.__levelCount = defaultdict(int)
@@ -71,7 +71,7 @@ class MsgCountHandler(logging.Handler):
         assert isinstance(df, pd.DataFrame)
         self.__df = df
 
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         """ overrides logging.Handler.emit """
         
         self.__levelCount[record.levelname] += 1
@@ -101,7 +101,7 @@ class MultiLineFormatter2(logging.Formatter):
         self.width = width
         super().__init__(**kwargs)
 
-    def get_header_length(self, record):
+    def get_header_length(self, record) -> int:
         """Get the header length of a given record."""
         record = copy.copy(record)
         record.msg = ''
@@ -114,7 +114,7 @@ class MultiLineFormatter2(logging.Formatter):
         header = re.sub('\033\\[([0-9]+)(;[0-9]+)*m', '', header)
         return len(header)
 
-    def format(self, record):
+    def format(self, record) -> str:
         """Format a record with added indentation."""
         message = record.msg
         # For now we only indent string typed messages
@@ -145,10 +145,10 @@ class MultiLineFormatter2(logging.Formatter):
 
         return super().format(record)
 
-def loggingLevelNames():
+def loggingLevelNames() -> Tuple[str]:
     return tuple(logging.getLevelName(x) for x in range(1, 101) if not logging.getLevelName(x).startswith('Level'))
 
-def set_log_level(logger, fmt, level=logging.DEBUG):
+def set_log_level(logger, fmt, level=logging.DEBUG) -> None:
     """ unfortunetaly, you have to reinstall coloredlogs """
 
     logger.setLevel(level)
@@ -181,6 +181,8 @@ def read_json_log_redis(uuid: str, key='json_logs', rs=None) -> List[Dict[str, A
     res = rs.hget(key, uuid)
     assert res is not None, f"cannot find log {uuid}, try different uuid"
     lines = json.loads(res)
+
+    assert isinstance(lines, list)
 
     return lines
 
