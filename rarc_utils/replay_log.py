@@ -18,8 +18,9 @@ from typing import List
 import argparse
 import logging
 import configparser
+from datetime import datetime
 from pathlib import Path
-from enum import Enum
+from enum import Enum, auto
 
 import redis
 import pandas as pd
@@ -45,20 +46,21 @@ psql  = AttrDict(parser['psql'])
 psession = get_session(psql)()
 
 class read_options(Enum):
-    FILE = 0
-    UUID = 1
-    REDIS = 2
+    FILE = auto()
+    UUID = auto()
+    REDIS = auto()
 
 read_options_str = ', '.join(read_options.__members__.keys())
 
-def get_last_log_sessions() -> pd.DataFrame:
-    # todo: this should happend automatically through trigger functions
-    refresh_view = "REFRESH MATERIALIZED VIEW last_log_sessions;"
-    psession.execute(refresh_view)
+# get_last_log_sessions(get_session(psql)())
+def get_last_log_sessions(session) -> pd.DataFrame:
+    # this now happens automatically through trigger functions
+    # refresh_view = "REFRESH MATERIALIZED VIEW last_log_sessions;"
+    # psession.execute(refresh_view)
 
     log_query = """         
         SELECT 
-            DISTINCT ON (instrum_broker) log_id, instrums, brokers, platform, ccxt_version, nerror, ntotal, updated, updated_ago 
+            DISTINCT ON (instrum_broker) log_id, instrums, brokers, success, platform, ccxt_version, nerror, ntotal, updated
         FROM 
             (
             SELECT 
@@ -72,10 +74,14 @@ def get_last_log_sessions() -> pd.DataFrame:
         ORDER BY instrum_broker, updated DESC;
         """
 
-    res = psession.execute(log_query)
+    res = session.execute(log_query)
 
     df = pd.DataFrame(res.mappings().fetchall())
+    df['success'] = df['success'].astype(int)
+    df['updated_ago'] = datetime.utcnow() - df.updated
     df = df.sort_values('updated', ascending=False).reset_index(drop=True)
+
+    session.close()
 
     return df
 
@@ -123,7 +129,7 @@ if __name__ == "__main__":
 
         if how == 'REDIS':
             # get last logs per broker, instrument from postgres, and let user select what log file to load
-            item = select_log_session(get_last_log_sessions())
+            item = select_log_session(get_last_log_sessions(psession))
             uuid = item.log_id
 
         elif how == 'UUID':
