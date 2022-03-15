@@ -17,6 +17,7 @@ import copy
 from itertools import chain
 from functools import partial, partialmethod
 import json
+import lz4.frame
 
 import coloredlogs
 from pythonjsonlogger import jsonlogger
@@ -24,11 +25,14 @@ from pythonjsonlogger import jsonlogger
 import pandas as pd
 import numpy as np
 
+JSON_LOGS = 'json_logs'
+
+
 class MsgCountHandler(logging.Handler):
     """ Counts number of log calls per level type 
         Additionally alsos store every emitted message to a dataframe, for later inspection
     """
-    
+
     def __init__(self, *args, savePandas=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.__levelCount = defaultdict(int)
@@ -175,11 +179,22 @@ class Empty(object):
 from humanfriendly.compat import coerce_string
 from humanfriendly.terminal import ANSI_COLOR_CODES, ansi_wrap
 
-def read_json_log_redis(uuid: str, key='json_logs', rs=None) -> List[Dict[str, Any]]:
+def save_json_log_redis(json_lines: List[Dict[str, Any]], ls, key=JSON_LOGS, rs=None) -> None:
 
     assert rs is not None
-    res = rs.hget(key, uuid)
-    assert res is not None, f"cannot find log {uuid}, try different uuid"
+    uuid = getattr(ls, 'id')
+    json_logs = json.dumps(json_lines).encode()
+    compr_logs: bytes = lz4.frame.compress(json_logs)
+
+    rs.hset(key, str(uuid), compr_logs)
+
+def read_json_log_redis(uuid: str, key=JSON_LOGS, rs=None) -> List[Dict[str, Any]]:
+
+    assert rs is not None
+    compr_log: bytes = rs.hget(key, uuid)
+    assert compr_log is not None, f"cannot find log {uuid}, try different uuid"
+
+    res = lz4.frame.decompress(compr_log)
     lines = json.loads(res)
 
     assert isinstance(lines, list)
