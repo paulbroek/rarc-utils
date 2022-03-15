@@ -7,8 +7,11 @@
         load log files from redis, create interface that quickly selects last log per broker, instance, datetime, etc.
 
     example usage:
-        %run ~/repos/rarc-utils/rarc_utils/replay_log.py --how redis --uuid '5f78dbdb-efe3-4170-b980-ce23c3999e00'
-        ipy ~/repos/rarc-utils/rarc_utils/replay_log.py -i -- --how redis --uuid '5f78dbdb-efe3-4170-b980-ce23c3999e00'
+        %run ~/repos/rarc-utils/rarc_utils/replay_log.py --how uuid --uuid '5f78dbdb-efe3-4170-b980-ce23c3999e00'
+        ipy ~/repos/rarc-utils/rarc_utils/replay_log.py -i -- --how uuid --uuid '5f78dbdb-efe3-4170-b980-ce23c3999e00'
+        ipy ~/repos/rarc-utils/rarc_utils/replay_log.py -i -- --how redis
+        %run ~/repos/rarc-utils/rarc_utils/replay_log.py --how redis
+        ipy ~/repos/rarc-utils/rarc_utils/replay_log.py -i -- --how file
 """
 
 from typing import List
@@ -49,6 +52,10 @@ class read_options(Enum):
 read_options_str = ', '.join(read_options.__members__.keys())
 
 def get_last_log_sessions() -> pd.DataFrame:
+    # todo: this should happend automatically through trigger functions
+    refresh_view = "REFRESH MATERIALIZED VIEW last_log_sessions;"
+    psession.execute(refresh_view)
+
     log_query = """         
         SELECT 
             DISTINCT ON (instrum_broker) log_id, instrums, brokers, platform, ccxt_version, nerror, ntotal, updated, updated_ago 
@@ -78,7 +85,12 @@ def select_log_session(df: pd.DataFrame):
     input_ = input('select index to read: ')
     input_ = int(input_)
 
-    assert input_ in df.index
+    try:
+        assert input_ in df.index
+    except AssertionError:
+        raise
+    finally:
+        psession.close()
 
     return df.loc[input_, :]
 
