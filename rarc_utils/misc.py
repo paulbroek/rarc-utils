@@ -666,3 +666,21 @@ def trunc_msg(msg: str, maxlen=125, pfx='...') -> str:
 
     assert isinstance(msg, str), f"{type(msg)=}, is not str"
     return f"{msg[:maxlen]}{pfx}"
+
+def size_mb(obj: Any, precision=2) -> float:
+    """ get size in mb for any python object, including nested dicts """
+    size = 0
+    if isinstance(obj, dict):
+        for _,v in obj.items():
+            siz = 0
+            try:
+                siz = sys.getsizeof(v) 
+            except Exception as e:
+                logger.error(f"cannot get size of {type(v)=} \n{v=} {e=!r}")
+                raise
+
+            size += siz
+    else:
+        size = sys.getsizeof(obj)
+
+    return round(size / 1024**2, precision)

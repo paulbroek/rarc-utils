@@ -46,6 +46,7 @@ psql  = AttrDict(parser['psql'])
 psession = get_session(psql)()
 
 class read_options(Enum):
+    """ log read options """
     FILE = auto()
     UUID = auto()
     REDIS = auto()
@@ -59,19 +60,19 @@ def get_last_log_sessions(session) -> pd.DataFrame:
     # psession.execute(refresh_view)
 
     log_query = """         
-        SELECT 
-            DISTINCT ON (instrum_broker) log_id, instrums, brokers, success, platform, ccxt_version, nerror, ntotal, updated
-        FROM 
-            (
             SELECT 
-                *, CONCAT(instrums, ' ', brokers) AS instrum_broker 
+                DISTINCT ON (instrum_broker) log_id, instrums, brokers, success, platform, ccxt_version, nerror, ntotal, updated
             FROM 
-                last_log_sessions
-            ORDER BY 
-                updated
-            ) AS nested
+                (
+                SELECT 
+                    *, CONCAT(instrums, ' ', brokers) AS instrum_broker 
+                FROM 
+                    last_log_sessions
+                ORDER BY 
+                    updated
+                ) AS nested
 
-        ORDER BY instrum_broker, updated DESC;
+            ORDER BY instrum_broker, updated DESC;
         """
 
     res = session.execute(log_query)
