@@ -25,6 +25,9 @@ from pythonjsonlogger import jsonlogger
 import pandas as pd
 import numpy as np
 
+from humanfriendly.compat import coerce_string
+from humanfriendly.terminal import ansi_wrap #, ANSI_COLOR_CODES
+
 JSON_LOGS = 'json_logs'
 
 
@@ -103,6 +106,7 @@ class MultiLineFormatter2(logging.Formatter):
     def __init__(self, width, **kwargs):
 
         self.width = width
+        self.header_len = None
         super().__init__(**kwargs)
 
     def get_header_length(self, record) -> int:
@@ -173,11 +177,11 @@ def add_log_level(name: str, level: int) -> None:
 
     # return logging
 
-class Empty(object):
+class Empty():
     """An empty class used to copy :class:`~logging.LogRecord` objects without reinitializing them."""
 
-from humanfriendly.compat import coerce_string
-from humanfriendly.terminal import ANSI_COLOR_CODES, ansi_wrap
+    def __init__(self):
+        pass
 
 def save_json_log_redis(json_lines: List[Dict[str, Any]], ls, key=JSON_LOGS, rs=None) -> None:
 
@@ -336,7 +340,6 @@ def setupCCXTTradeLogger(LOG_FILE, session_id, useFluent=1, saveRotatingFile=1, 
 
     assert not(saveRotatingFile and saveFile)
 
-    # def setup():
     # ugly code, don't reset logger in this way
     # import logging
     # logging.shutdown()
@@ -413,5 +416,3 @@ def setupCCXTTradeLogger(LOG_FILE, session_id, useFluent=1, saveRotatingFile=1, 
     # stream_handler.setFormatter(formatter)
 
     return logger
-
-    # return setup
