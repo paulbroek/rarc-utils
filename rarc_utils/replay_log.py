@@ -14,7 +14,7 @@
         ipy ~/repos/rarc-utils/rarc_utils/replay_log.py -i -- --how file
 """
 
-from typing import List
+from typing import List, Optional
 import argparse
 import logging
 import configparser
@@ -24,6 +24,8 @@ from enum import Enum, auto
 
 import redis
 import pandas as pd
+
+from sqlalchemy.orm import Session
 
 from rarc.config.redis import redis as rk
 import rarc.config.redis
@@ -53,27 +55,27 @@ class read_options(Enum):
 
 read_options_str = ', '.join(read_options.__members__.keys())
 
+log_query = """         
+        SELECT 
+            DISTINCT ON (instrum_broker) log_id, instrums, brokers, success, platform, ccxt_version, nerror, ntotal, updated
+        FROM 
+            (
+            SELECT 
+                *, CONCAT(instrums, ' ', brokers) AS instrum_broker 
+            FROM 
+                last_log_sessions
+            ORDER BY 
+                updated
+            ) AS nested
+
+        ORDER BY instrum_broker, updated DESC;
+    """
+
 # get_last_log_sessions(get_session(psql)())
-def get_last_log_sessions(session) -> pd.DataFrame:
+def get_last_log_sessions(session: Session) -> pd.DataFrame:
     # this now happens automatically through trigger functions
     # refresh_view = "REFRESH MATERIALIZED VIEW last_log_sessions;"
     # psession.execute(refresh_view)
-
-    log_query = """         
-            SELECT 
-                DISTINCT ON (instrum_broker) log_id, instrums, brokers, success, platform, ccxt_version, nerror, ntotal, updated
-            FROM 
-                (
-                SELECT 
-                    *, CONCAT(instrums, ' ', brokers) AS instrum_broker 
-                FROM 
-                    last_log_sessions
-                ORDER BY 
-                    updated
-                ) AS nested
-
-            ORDER BY instrum_broker, updated DESC;
-        """
 
     res = session.execute(log_query)
 
@@ -86,7 +88,8 @@ def get_last_log_sessions(session) -> pd.DataFrame:
 
     return df
 
-def select_log_session(df: pd.DataFrame):
+def select_log_session(df: pd.DataFrame) -> Optional[pd.Series]:
+    """ user can select log file to load by typing the index of dataframe """
 
     print(f'last_log_sessions: \n{df} \n')
     input_ = input('select index to read: ')
@@ -105,22 +108,23 @@ if __name__ == "__main__":
 
     CLI=argparse.ArgumentParser()
     CLI.add_argument(
-      "--how",    # read log from file or from redis
+      "--how",
       type=str,         
       default='file',
       help=f"select read option: {read_options_str}"
     )
     CLI.add_argument(
-      "--uuid",    # uuid of log to reply from redis
+      "--uuid",
       type=str,         
       default='',
+      help="UUID of log to fetch from redis"
     )
 
     args = CLI.parse_args()
 
     lines: List[dict] = []
 
-    how = args.how.upper()
+    how: str = args.how.upper()
     
     if how == 'FILE':
         lines = read_json_log_file(log_file)
