@@ -5,7 +5,7 @@
     Like: creating async or blocking sessions, creating all models, ...
 """
 
-from typing import Dict, Any # List, 
+from typing import Dict, Any, Union # List, 
 from abc import ABCMeta, abstractmethod # , ABC
 import logging
 import asyncio
@@ -167,7 +167,7 @@ async def aget_or_create(session, model, **kwargs):
 
     return instance
 
-def create_instance(model, item):
+def create_instance(model, item: Union[dict, Any]):
     # assert model is not None
 
     if isinstance(item, model):

@@ -55,6 +55,12 @@ class read_options(Enum):
 
 read_options_str = ', '.join(read_options.__members__.keys())
 
+session_query = """
+        SELECT * 
+        FROM 
+            last_sessions;
+    """
+    
 log_query = """         
         SELECT 
             DISTINCT ON (instrum_broker) log_id, instrums, brokers, success, platform, ccxt_version, nerror, ntotal, updated
