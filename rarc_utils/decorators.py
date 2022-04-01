@@ -268,6 +268,37 @@ def get_try_catch_decorator(errors=(Exception, ), default_value=''):
 #try_catch_key_name = get_decorator((KeyError, NameError), default_value='default')
 try_catch_any = get_try_catch_decorator((Exception), default_value='')
 
+def reconnect_mysql(func: Callable) -> Callable:
+    """ decorator 
+
+        reconnects to MySQL if disconnected
+    """
+
+    @wraps(func)
+    def _reconnect(*args, **kwargs):
+
+        # look for 'db' kwarg at binding time
+        # bound = inspect.signature(func).bind(*args, **kwargs)
+        # bound.apply_defaults()
+
+        # print(f'{func.__name__} called with {bound}')
+        # print(f'{dir(bound)=}')
+        # print(f'{bound.arguments=}')
+        # print(f'{type(bound.arguments)=}')
+
+        self = args[0]
+
+        assert hasattr(self, 'con')
+        
+        # decorator functionality
+        if not self.con.is_connected():
+            self.con.reconnect()
+
+        # return original func
+        return func(*args, **kwargs)
+
+    return _reconnect
+
 def reconnect(func: Callable) -> Callable:
     """ decorator 
 
