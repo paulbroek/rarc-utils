@@ -292,6 +292,7 @@ def reconnect_mysql(func: Callable) -> Callable:
         
         # decorator functionality
         if not self.con.is_connected():
+            logger.info(f"reconnected to MySQL")
             self.con.reconnect()
 
         # return original func
