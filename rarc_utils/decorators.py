@@ -277,15 +277,6 @@ def reconnect_mysql(func: Callable) -> Callable:
     @wraps(func)
     def _reconnect(*args, **kwargs):
 
-        # look for 'db' kwarg at binding time
-        # bound = inspect.signature(func).bind(*args, **kwargs)
-        # bound.apply_defaults()
-
-        # print(f'{func.__name__} called with {bound}')
-        # print(f'{dir(bound)=}')
-        # print(f'{bound.arguments=}')
-        # print(f'{type(bound.arguments)=}')
-
         self = args[0]
 
         assert hasattr(self, 'con')

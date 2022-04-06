@@ -166,7 +166,6 @@ def set_log_level(logger, fmt, level=logging.DEBUG) -> None:
 def add_log_level(name: str, level: int) -> None: 
     """ log level 'name' will be added to all logger, instantiated from logging.getLogger () """
 
-    # logging.URGENT = level
     setattr(logging, name, level)
     newLevelAttr = getattr(logging, name)
     logging.addLevelName(newLevelAttr, name)
@@ -174,8 +173,6 @@ def add_log_level(name: str, level: int) -> None:
     setattr(logging.Logger, name.lower(), partialmethod(logging.Logger.log, newLevelAttr))
     # logging.urgent = partial(logging.log, logging.URGENT)
     setattr(logging, name.lower(), partial(logging.log, newLevelAttr))
-
-    # return logging
 
 class Empty():
     """An empty class used to copy :class:`~logging.LogRecord` objects without reinitializing them."""

@@ -4,7 +4,8 @@
     replay json log files as if they occured in current session
 
     todo:
-        load log files from redis, create interface that quickly selects last log per broker, instance, datetime, etc.
+        - load log files from redis, create interface that quickly selects last log per broker, instance, datetime, etc.
+        - allow to replay debug OR info level
 
     example usage:
         %run ~/repos/rarc-utils/rarc_utils/replay_log.py --how uuid --uuid '5f78dbdb-efe3-4170-b980-ce23c3999e00'
@@ -63,7 +64,7 @@ session_query = """
     
 log_query = """         
         SELECT 
-            DISTINCT ON (instrum_broker) log_id, instrums, brokers, success, platform, ccxt_version, nerror, ntotal, updated
+            DISTINCT ON (instrum_broker) strategy_name, log_id, instrums, brokers, success, platform, ccxt_version, nerror, ntotal, updated
         FROM 
             (
             SELECT 
@@ -125,6 +126,12 @@ if __name__ == "__main__":
       default='',
       help="UUID of log to fetch from redis"
     )
+    CLI.add_argument(
+      "-v", "--verbosity", 
+      type=str,         
+      default='info',
+      help="choose debug log level: DEBUG, INFO, WARNING, ERROR, CRITICAL"
+    )
 
     args = CLI.parse_args()
 
@@ -154,6 +161,11 @@ if __name__ == "__main__":
         raise NotImplementedError(f"{args.how=} not implemented. Available: {read_options_str}")
 
     assert isinstance(lines, list)
+
+    # set log verbosity
+    verbosity = args.verbosity.upper()
+    log_level   = getattr(logging, verbosity)
+    logger.setLevel(log_level)
 
     # replay log
     for line in lines:
