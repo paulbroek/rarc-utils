@@ -11,8 +11,9 @@ requires = [
     "timeago>=1.0.15",
     "tqdm>=4.62.1",
     "psutil>=5.8.0",
-    "sqlalchemy>=1.4.23"
-    "PyYAML>=5.4.1"
+    "sqlalchemy>=1.4.23",
+    "PyYAML>=5.4.1",
+    "python-json-logger>=2.0.2",
 ]
 
 setup(
