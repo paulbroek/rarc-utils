@@ -661,10 +661,18 @@ def elaps_df(call_hist: Deque[tuple]=None, byFunc=None, fmtPrec=None, drop=True)
 
     return df
 
-def trunc_msg(msg: str, maxlen=125, pfx='...') -> str:
+def trunc_msg(msg: Optional[str], maxlen=125, pfx='...') -> str:
     """ truncate a long msg, e.g. json string to {'a':2, ...} """
 
-    assert isinstance(msg, str), f"{type(msg)=}, is not str"
+    assert isinstance(msg, (str, type(None))), f"{type(msg)=}, is not str"
+    
+    if msg is None:
+        msg = 'None'
+
+    if len(msg) <= maxlen:
+        return msg
+    
+    # only truncate when maxlen is exceeded
     return f"{msg[:maxlen]}{pfx}"
 
 def size_mb(obj: Any, precision=2) -> float:
