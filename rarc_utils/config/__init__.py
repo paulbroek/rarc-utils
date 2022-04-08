@@ -1,1 +1,1 @@
-from .blueprint_keys import *
+from .blueprint_keys import blueprint_keys

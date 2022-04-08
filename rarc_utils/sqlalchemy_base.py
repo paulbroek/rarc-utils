@@ -5,13 +5,15 @@
     Like: creating async or blocking sessions, creating all models, ...
 """
 
-from typing import Dict, Any, Union # List, 
+from typing import Dict, Any, Union, AsyncGenerator # List, 
 from abc import ABCMeta, abstractmethod # , ABC
 import logging
 import asyncio
 from pprint import pprint
 
+from fastapi import HTTPException
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine
 # from sqlalchemy.ext.declarative import declarative_base
@@ -95,6 +97,21 @@ def get_async_session(psql: AttrDict) -> sessionmaker:
     )
 
     return async_session
+
+# Dependency
+async def get_async_db(async_session) -> AsyncGenerator:
+    async with async_session() as session:
+        try:
+            yield session
+            await session.commit()
+        except SQLAlchemyError as sql_ex:
+            await session.rollback()
+            raise sql_ex
+        except HTTPException as http_ex:
+            await session.rollback()
+            raise http_ex
+        finally:
+            await session.close()
 
 async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
 
