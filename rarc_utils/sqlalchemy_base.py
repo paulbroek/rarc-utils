@@ -117,7 +117,7 @@ def get_async_db(psql: AttrDict) -> Callable:
             finally:
                 await session.close()
 
-    return make_db
+    return make_db()
 
 async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
 
