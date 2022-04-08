@@ -5,7 +5,7 @@
     Like: creating async or blocking sessions, creating all models, ...
 """
 
-from typing import Dict, Any, Union, AsyncGenerator # List, 
+from typing import Dict, Any, Union, Callable, AsyncGenerator # List, 
 from abc import ABCMeta, abstractmethod # , ABC
 import logging
 import asyncio
@@ -99,19 +99,25 @@ def get_async_session(psql: AttrDict) -> sessionmaker:
     return async_session
 
 # Dependency
-async def get_async_db(async_session) -> AsyncGenerator:
-    async with async_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except SQLAlchemyError as sql_ex:
-            await session.rollback()
-            raise sql_ex
-        except HTTPException as http_ex:
-            await session.rollback()
-            raise http_ex
-        finally:
-            await session.close()
+def get_async_db(psql: AttrDict) -> Callable:
+
+    async def make_db() -> AsyncGenerator:
+        async_session = get_async_session(psql)
+
+        async with async_session() as session:
+            try:
+                yield session
+                await session.commit()
+            except SQLAlchemyError as sql_ex:
+                await session.rollback()
+                raise sql_ex
+            except HTTPException as http_ex:
+                await session.rollback()
+                raise http_ex
+            finally:
+                await session.close()
+
+    return make_db
 
 async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
 
