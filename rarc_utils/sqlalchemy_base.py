@@ -119,6 +119,10 @@ def get_async_db(psql: AttrDict) -> Callable:
 
     return make_db
 
+async def run_in_session(async_session, func, **kwargs):
+    async with async_session() as session:
+        return await func(session, **kwargs)
+
 async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
 
     assert models is not None
