@@ -3,3 +3,4 @@ yapic.json
 numpy
 pandas
 python-json-logger
+fastapi 

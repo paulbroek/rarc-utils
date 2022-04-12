@@ -11,7 +11,6 @@ import logging
 import asyncio
 from pprint import pprint
 
-from fastapi import HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -100,6 +99,9 @@ def get_async_session(psql: AttrDict) -> sessionmaker:
 
 # Dependency
 def get_async_db(psql: AttrDict) -> Callable:
+
+    # todo: add dep to repos like scrape_goodreads
+    from fastapi import HTTPException
 
     async def make_db() -> AsyncGenerator:
         async_session = get_async_session(psql)
