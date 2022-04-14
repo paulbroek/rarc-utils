@@ -4,15 +4,15 @@
     replay json log files as if they occured in current session
 
     todo:
-        - load log files from redis, create interface that quickly selects last log per broker, instance, datetime, etc.
-        - allow to replay debug OR info level
+        - [X] load log files from redis, create interface that quickly selects last log per broker, instance, datetime, etc.
+        - [X] allow to replay debug OR info level
 
     example usage:
-        %run ~/repos/rarc-utils/rarc_utils/replay_log.py --how uuid --uuid '5f78dbdb-efe3-4170-b980-ce23c3999e00'
-        ipy ~/repos/rarc-utils/rarc_utils/replay_log.py -i -- --how uuid --uuid '5f78dbdb-efe3-4170-b980-ce23c3999e00'
-        ipy ~/repos/rarc-utils/rarc_utils/replay_log.py -i -- --how redis
-        %run ~/repos/rarc-utils/rarc_utils/replay_log.py --how redis
-        ipy ~/repos/rarc-utils/rarc_utils/replay_log.py -i -- --how file
+        %run    ~/repos/rarc-utils/rarc_utils/replay_log.py         --how uuid  --uuid '5f78dbdb-efe3-4170-b980-ce23c3999e00'
+        %run    ~/repos/rarc-utils/rarc_utils/replay_log.py         --how redis
+        ipy     ~/repos/rarc-utils/rarc_utils/replay_log.py -i --   --how uuid  --uuid '5f78dbdb-efe3-4170-b980-ce23c3999e00'
+        ipy     ~/repos/rarc-utils/rarc_utils/replay_log.py -i --   --how redis
+        ipy     ~/repos/rarc-utils/rarc_utils/replay_log.py -i --   --how file
 """
 
 from typing import List, Optional

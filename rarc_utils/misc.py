@@ -206,7 +206,7 @@ def du_dir(path: Path) -> int:
     return du_dir_(path)
 
 def dir_(obj, not_starts=('__','_')) -> List[str]:
-    """ alternative dir() method that only shows public attributse """
+    """ alternative dir() method that only shows public attributes """
     
     return [a for a in dir(obj) if not a.startswith(not_starts)]
     
@@ -500,7 +500,7 @@ def get_key_or_none(d: Optional[dict], key: str) -> Optional[Any]:
 
 def unnest_dict(df, col: str, key: str, renameCol=None, fmt='{}_{}', assign=True, debug=False) -> Union[str, Tuple[str, pd.Series]]:
     """ 
-        unnest a dataframe column of dictionaries to a new column with dict values for key 'key'
+        unnest a dataframe column of dictionaries to a new column with dict values for key `key`
 
         df          dframe  dataframe to unnest
         col         str     dataframe column that contains dictionaries

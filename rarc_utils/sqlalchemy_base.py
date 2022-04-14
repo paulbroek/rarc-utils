@@ -1,8 +1,8 @@
 """ slqalchemy.py
     
-    utility functions that are used a lot when working with SQLAlchemy
+    utility functions that are used frequently when working with SQLAlchemy
 
-    Like: creating async or blocking sessions, creating all models, ...
+    Like: creating async or blocking sessions, creating all models, getting all str models, get_or_create methods, ...
 """
 
 from typing import Dict, Any, Union, Callable, AsyncGenerator # List, 
