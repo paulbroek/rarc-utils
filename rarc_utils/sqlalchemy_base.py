@@ -155,12 +155,15 @@ def get_str_mappings(session: Session, models=None) -> Dict[str, Any]:
 
     return str_mappings
 
-def get_or_create(session: Session, model, item=None, **kwargs):
-
+def get_or_create(session: Session, model, item=None, filter_by=None, **kwargs):
+    """ get item from postgres, if it exists by `filter_by` OR `kwargs` 
+        if it doesn't exist, create and return it
+    """
     if item is not None:
         kwargs = item.as_dict()
     
-    instance = session.query(model).filter_by(**kwargs).first()
+    filter_by = filter_by or kwargs
+    instance = session.query(model).filter_by(**filter_by).first()
 
     if instance:
         return instance
