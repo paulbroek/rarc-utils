@@ -5,31 +5,32 @@
 """
 
 from typing import Dict, List, Tuple, Union, Optional, Any, Deque
-import traceback
+# import traceback
 import hashlib
-import uuid
+# import uuid
 import importlib
-from time import time, time_ns, sleep
+from time import time_ns, sleep
 import os
 from datetime import datetime
 import logging
-from collections import defaultdict, deque, namedtuple, ChainMap
+from collections import defaultdict, ChainMap # deque, namedtuple
 from functools import wraps, partial
 import configparser
 import signal
 import itertools
 import sys
+import timeago
 import random
-import platform
-import copy
-import yaml
+# import platform
+# import copy
 import subprocess
 import requests
 from pathlib import Path
 import psutil
 import asyncio
 
-from yapic import json
+import yaml
+# from yapic import json
 import numpy as np
 import pandas as pd
 
@@ -660,6 +661,10 @@ def elaps_df(call_hist: Deque[tuple]=None, byFunc=None, fmtPrec=None, drop=True)
         del df[timeCol], df['dindex']
 
     return df
+
+def timeago_series(s: pd.Series) -> pd.Series:
+
+    return s.map(lambda x: timeago.format(x, datetime.utcnow()))
 
 def trunc_msg(msg: Optional[str], maxlen=125, pfx='...') -> str:
     """ truncate a long msg, e.g. json string to {'a':2, ...} """
