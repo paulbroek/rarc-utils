@@ -5,7 +5,7 @@
     Like: creating async or blocking sessions, creating all models, getting all str models, get_or_create methods, ...
 """
 
-from typing import Dict, Any, Union, Callable, AsyncGenerator # List, 
+from typing import Optional, Dict, Any, List, Union, Callable, AsyncGenerator
 from abc import ABCMeta, abstractmethod # , ABC
 import logging
 import asyncio
@@ -176,26 +176,41 @@ def get_or_create(session: Session, model, item=None, filter_by=None, **kwargs):
 
     return instance
 
-async def aget_or_create(session, model, **kwargs):
+async def aget(session: AsyncSession, model, filter_by: Optional[dict]=None) -> Optional["model"]:
 
-    # instance = session.query(model).filter_by(**kwargs).first()
-    query = select(model).filter_by(**kwargs)
-    # print(f"{type(query)=} {dir(query)=}")
-    # .first()
+    assert filter_by is not None
+
+    query = select(model).filter_by(**filter_by)
 
     res = await session.execute(query)
     instance = res.scalars().first()
-    if instance:
-        # print(f"{instance=} {dir(instance)=}")
-        # return instance.scalars()
-        pass
 
-    else:
+    return instance
+
+async def aaget_or_create(session: AsyncSession, model, **kwargs):
+    """ same as aget_or_create, but also returns bool flag if item was created
+    """
+    query = select(model).filter_by(**kwargs)
+
+    res = await session.execute(query)
+    instance = res.scalars().first()
+
+    did_create = False
+
+    if not instance:
         instance = model(**kwargs)
         session.add(instance)
         await session.commit()
 
+        did_create = True
+
     assert isinstance(instance, model), f"{type(instance)=}, should be {model}"
+
+    return instance, did_create
+
+async def aget_or_create(session: AsyncSession, model, **kwargs):
+
+    instance, _ = await aaget_or_create(session, model, **kwargs)
 
     return instance
 
@@ -211,7 +226,21 @@ def create_instance(model, item: Union[dict, Any]):
         logger.warning(f"cannot create '{model.__tablename__}'. {str(e)=} \n{item=}")
         raise
 
-async def create_many(session, model, items: Dict[str, dict], nameAttr='name', debug=False, many=True, printCondition=None) -> Dict[str, Any]:
+# async def aget_or_create_many(asession: AsyncSession, model, items: List[dict]):
+
+#     async with asession() as session:
+#         cors = [aaget_or_create(session, model, **item) for item in items]
+#         rr = await asyncio.gather(*cors) # doesn't work, postgres get over requested
+#         # log how many items were newly created
+#         nnew = sum([r[1] for r in rr])
+
+#         if nnew:
+#             MODELS = model + 's' if nnew > 1 else model
+#             logger.info(f"created {nnew:_} new {MODELS}")
+
+#         return [r[0] for r in rr]
+
+async def create_many(session: AsyncSession, model, items: Dict[str, dict], nameAttr='name', debug=False, many=True, returnExisting=False, printCondition=None) -> Dict[str, Any]:
     """ create many of any model type: Character, Genre, Places, Author, ... 
        
         printCondition  print all items when this condition is met
@@ -227,23 +256,23 @@ async def create_many(session, model, items: Dict[str, dict], nameAttr='name', d
     names = set(items.keys())
     names = list(names - set(existingNames.scalars()))
     itemsDict = {name: create_instance(model, item) for name, item in items.items() if name in names}
-    items = list(itemsDict.values())
+    newItems = list(itemsDict.values())
 
-    logger.info(f"{model.__tablename__}s to add: {len(items)}")
+    logger.info(f"{model.__tablename__}s to add: {len(newItems)}")
 
-    if printCondition is not None and printCondition(model, items):
+    if printCondition is not None and printCondition(model, newItems):
         # fmt_items = ', '.join([i.title for i in items.values()])
-        fmt_items = ', '.join([i.title for i in items])
+        fmt_items = ', '.join([i.title for i in newItems])
         logger.info(fmt_items)
 
     if debug:
-        logger.info(f"{items[:3]=}")
+        logger.info(f"{newItems[:3]=}")
 
     # print(f"{dir(session)=}")
     # print(f"{help(session.add_all)=}")
 
     # session.add(c)
-    if len(items) > 0:
+    if len(newItems) > 0:
         if not many:
             for item in items:
                 if debug:
@@ -260,7 +289,21 @@ async def create_many(session, model, items: Dict[str, dict], nameAttr='name', d
 
                 await session.commit()
         else:
-            session.add_all(items)
+            session.add_all(newItems)
             await session.commit()
+
+    # return all existing items for items.keys() ids
+    if returnExisting:
+        attr = getattr(model, nameAttr)
+        # logger.info(f"{attr=}")
+
+        reqNames = list(items.keys())
+        query = select(model).where(attr.in_(reqNames))
+        res = await session.execute(query)
+
+        instances = res.scalars().fetchall()
+
+        # return a dict
+        itemsDict = {getattr(i, nameAttr): i for i in instances}
 
     return itemsDict
