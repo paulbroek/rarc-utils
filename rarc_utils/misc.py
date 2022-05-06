@@ -4,13 +4,12 @@
     miscellaneous methods used by rarc 
 """
 
-from typing import Dict, List, Tuple, Union, Optional, Any, Deque
+from typing import Dict, List, Tuple, Union, Optional, Set, Any, Deque
 
 # import traceback
 import hashlib
 
 # import uuid
-import importlib
 from time import sleep  # , time_ns
 import os
 from datetime import datetime
@@ -22,6 +21,8 @@ import signal
 import itertools
 import sys
 import random
+import importlib
+from importlib.metadata import version
 
 # import platform
 # import copy
@@ -275,10 +276,8 @@ def colab_auto_refresh():
     raise NotImplementedError
 
 
-def check_version(package: str, lib, logger, reqVersion=False, askUser=True):
+def check_version(package: str, lib, reqVersion=False, askUser=True):
     """compares local version of a package with that listed on pypi.org. for ccxt lib it's crucial that you always update before running this bot."""
-    import requests
-    from importlib.metadata import version
 
     # fetch latest PyPi version
     url = f"https://pypi.org/pypi/{package}/json"
@@ -328,11 +327,11 @@ def check_version(package: str, lib, logger, reqVersion=False, askUser=True):
 
 
 def load_keys(
-    brokers: dict,
+    brokers: List[str],
     capitalize=False,
     secretsDir="/home/paul/repos/rarc-secrets",
     file="/rarc/config/keys.cfg",
-):  # file='config/keys.cfg'
+):
     """load cfg keys to dictionary
 
     capitalize  capitalize dict keys
@@ -341,12 +340,13 @@ def load_keys(
     file = secretsDir + file
     if not capitalize:
         brokers = [b.lower() for b in brokers]
-    # print(f'{brokers=}')
+
     def load():
-        read_res = cfg.read(file)  # returns ['filename']
+        read_res = cfg.read(file)
         assert (
             lreadres := len(read_res)
         ) == 1, f"{lreadres=} != 1, cannot load config. {file=}"
+
         print(f"cfg keys: {list(cfg.keys())}")
         # keys = defaultdict(dict) # dangerous, any read will give a return value
         keys = {b: dict() for b in brokers}
@@ -378,7 +378,7 @@ def chainGatherRes(res: List[dict], uniqueKeys=True) -> dict:
     if uniqueKeys:
         allkeys = [d.keys() for d in res]
         alls = list(itertools.chain(*allkeys))
-        uniques = set().union(*allkeys)
+        uniques: Set[Any] = set().union(*allkeys)
 
         assert (lalls := len(alls)) == (luniq := len(uniques)), f"{lalls} != {luniq}"
 
@@ -541,8 +541,8 @@ def loadConfig(configFile=None):
 def getPublicIP(url="https://api.ipify.org", n=0, max_retry=5) -> Optional[str]:
 
     try:
-        res = requests.get(url)
-        res = res.content.decode("utf8")
+        resp = requests.get(url)
+        res = resp.content.decode("utf8")
 
         # retry if result is html page instead of host url, max 5 retries
         if len(res) > 25 and n < max_retry:
@@ -557,10 +557,14 @@ def getPublicIP(url="https://api.ipify.org", n=0, max_retry=5) -> Optional[str]:
     except Exception as e:
         logger.error(f"cannot fetch public IP from API. {str(e)=}")
 
+    return None
+
 
 def get_key_or_none(d: Optional[dict], key: str) -> Optional[Any]:
     if isinstance(d, dict):
         return d.get(key, None)
+
+    return None
 
 
 def unnest_dict(
@@ -622,8 +626,6 @@ def unnest_dict(
     return newColName, newCol
 
 
-# unnestList = [('project','id'), ('service','description'), ('sku','description'), ]
-# addedCols, df = unnest_assign_cols(df, unnestList)
 def unnest_assign_cols(
     df,
     unnestList=None,
@@ -638,6 +640,10 @@ def unnest_assign_cols(
 
     unnestList  if None, will try to unnest all keys in dict
     col         if passed, unnest this col
+
+    usage:
+        unnestList = [('project','id'), ('service','description'), ('sku','description'), ]
+        addedCols, df = unnest_assign_cols(df, unnestList)
     """
 
     assert isinstance(df, pd.DataFrame)
@@ -701,10 +707,6 @@ def get_git_revision_short_hash() -> str:
     )
 
 
-# df = elaps_df(zp.call_hist, byFunc='calc_talib')
-# df = elaps_df(zp.call_hist, byFunc='calc_talib', fmtPrec='ms')
-# elaps_df(zp.call_hist).groupby('func').describe()
-# elaps_df(zp.call_hist).groupby('func').describe(percentiles=(.25, .5, .7, .8, .9, .95)).T
 def elaps_df(
     call_hist: Deque[tuple] = None, byFunc=None, fmtPrec=None, drop=True
 ) -> pd.DataFrame:
@@ -715,6 +717,12 @@ def elaps_df(
     byFunc      filter df by function name and drop 'func' col
     fmtPrec     format datetimeindex precision: 's', ms', 'ns'
     drop        drop intermediary columns 'time' and 'dindex'
+
+    usage:
+        df = elaps_df(zp.call_hist, byFunc='calc_talib')
+        df = elaps_df(zp.call_hist, byFunc='calc_talib', fmtPrec='ms')
+        elaps_df(zp.call_hist).groupby('func').describe()
+        elaps_df(zp.call_hist).groupby('func').describe(percentiles=(.25, .5, .7, .8, .9, .95)).T
     """
 
     assert call_hist is not None

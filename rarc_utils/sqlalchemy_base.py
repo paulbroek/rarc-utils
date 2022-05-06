@@ -45,7 +45,8 @@ class AbstractBase(metaclass=ABCMeta):  # ABC
     @abstractmethod
     def __repr__(self):
         """force every child to have a __repr__ method
-        todo: still don't know how to inherit from Base, UtilityBase and this AbstractBase, it throws error:
+        todo:
+            still don't know how to inherit from Base, UtilityBase and this AbstractBase, it throws error:
             TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
         """
         pass
@@ -62,7 +63,8 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
     if not force:
         if (
             input(
-                "are you sure you want to recreate all models? Use alembic for migrations, and run this function only for a total model reset. Pres 'y' to confirm: "
+                "are you sure you want to recreate all models? Use alembic for migrations, \
+                and run this function only for a total model reset. Pres 'y' to confirm: "
             )
             != "y"
         ):
@@ -151,7 +153,7 @@ async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
             model.__tablename__: session.execute(select(model)) for model in models
         }
 
-        str_mappings = {model.__tablename__: None for model in models}
+        # str_mappings = {model.__tablename__: None for model in models}
 
         res = dict(zip(queries.keys(), await asyncio.gather(*queries.values())))
         str_mappings = {
@@ -283,7 +285,8 @@ async def create_many(
 
     printCondition  print all items when this condition is met
 
-    Todo:   filtering out existing names only works for Category models, author is unique by name + birth_date,
+    Todo:   filtering out existing names only works for Category models,
+            author is unique by name + birth_date,
             so it needs a different implementation
     """
 
