@@ -294,8 +294,8 @@ async def create_many(
     # async with async_session() as session:
     # first check if character names exist
     existingNames = await session.execute(select(getattr(model, nameAttr)))
-    names = set(items.keys())
-    names = list(names - set(existingNames.scalars()))
+    namesSet = set(items.keys())
+    names = list(namesSet - set(existingNames.scalars()))
     itemsDict = {
         name: create_instance(model, item)
         for name, item in items.items()
@@ -324,7 +324,7 @@ async def create_many(
                     logger.info(f"{item=}")
                     if hasattr(item, "_as_big_dict"):
                         logger.info(f"big dict: \n")
-                        pprint(item._as_big_dict())
+                        pprint(getattr(item, "_as_big_dict")())
                     # logger.info(f"{item._as_big_dict()=}")
                 try:
                     session.add(item)

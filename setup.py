@@ -17,16 +17,16 @@ requires = [
 ]
 
 setup(
-    name='rarc_utils',
-    version='0.0.10',
-    description='Rarc utility functions',
-    url='git@github.com:paulbroek/rarc-utils.git',
-    author='Paul Broek',
-    author_email='pcbroek@paulbroek.nl',
-    license='unlicense',
+    name="rarc_utils",
+    version="0.1.0",
+    description="Rarc utility functions",
+    url="git@github.com:paulbroek/rarc-utils.git",
+    author="Paul Broek",
+    author_email="pcbroek@paulbroek.nl",
+    license="unlicense",
     install_requires=requires,
-    #packages=['rarc'],
-    packages=find_packages(exclude=['tests','pymt5adapter','logs']),
-    python_requires='>=3.7', # 3.8 # remove 3.8 requirement so it can be installed in google colab
-    zip_safe=False
+    # packages=['rarc'],
+    packages=find_packages(exclude=["tests", "pymt5adapter", "logs"]),
+    python_requires=">=3.7",  # 3.8 # remove 3.8 requirement so it can be installed in google colab
+    zip_safe=False,
 )

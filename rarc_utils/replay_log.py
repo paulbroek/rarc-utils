@@ -16,6 +16,7 @@
 """
 
 from typing import List, Optional
+import sys
 import argparse
 import logging
 import configparser
@@ -35,33 +36,38 @@ from rarc_utils.misc import AttrDict
 from rarc_utils.sqlalchemy_base import get_session
 
 log_fmt = "%(asctime)s - %(module)-16s - %(lineno)-4s - %(funcName)-16s - %(levelname)-7s - %(message)s"  # name
-logger = setup_logger(cmdLevel=logging.INFO, saveFile=0, savePandas=1, jsonLogger=0, color=1, fmt=log_fmt) # URGENT WARNING
-log_file = 'json_lines.log'
-log_handler = logger.handlers[-1] # last handler is colored logs console handler
+logger = setup_logger(
+    cmdLevel=logging.INFO, saveFile=0, savePandas=1, jsonLogger=0, color=1, fmt=log_fmt
+)  # URGENT WARNING
+log_file = "json_lines.log"
+log_handler = logger.handlers[-1]  # last handler is colored logs console handler
 
 # ugly way of retrieving postgres cfg file
 p = Path(rarc.config.redis.__file__)
-p.with_name('aatPostgres.cfg')
-cfgFile = p.with_name('aatPostgres.cfg')
-parser  = configparser.ConfigParser()
+p.with_name("aatPostgres.cfg")
+cfgFile = p.with_name("aatPostgres.cfg")
+parser = configparser.ConfigParser()
 parser.read(cfgFile)
-psql  = AttrDict(parser['psql'])
+psql = AttrDict(parser["psql"])
 psession = get_session(psql)()
 
+
 class read_options(Enum):
-    """ log read options """
+    """log read options"""
+
     FILE = auto()
     UUID = auto()
     REDIS = auto()
 
-read_options_str = ', '.join(read_options.__members__.keys())
+
+read_options_str = ", ".join(read_options.__members__.keys())
 
 session_query = """
         SELECT * 
         FROM 
             last_sessions;
     """
-    
+
 log_query = """         
         SELECT 
             DISTINCT ON (instrum_broker) strategy_name, log_id, instrums, brokers, success, platform, ccxt_version, nerror, ntotal, updated
@@ -87,20 +93,21 @@ def get_last_log_sessions(session: Session) -> pd.DataFrame:
     res = session.execute(log_query)
 
     df = pd.DataFrame(res.mappings().fetchall())
-    df['success'] = df['success'].astype(int)
-    df['updated_ago'] = datetime.utcnow() - df.updated
-    df = df.sort_values('updated', ascending=False).reset_index(drop=True)
+    df["success"] = df["success"].astype(int)
+    df["updated_ago"] = datetime.utcnow() - df.updated
+    df = df.sort_values("updated", ascending=False).reset_index(drop=True)
 
     session.close()
 
     return df
 
-def select_log_session(df: pd.DataFrame) -> Optional[pd.Series]:
-    """ user can select log file to load by typing the index of dataframe """
 
-    print(f'last_log_sessions: \n{df} \n')
-    input_ = input('select index to read: ')
-    input_ = int(input_)
+def select_log_session(df: pd.DataFrame) -> Optional[pd.Series]:
+    """user can select log file to load by typing the index of dataframe"""
+
+    print(f"last_log_sessions: \n{df} \n")
+    input__ = input("select index to read: ")
+    input_ = int(input__)
 
     try:
         assert input_ in df.index
@@ -111,26 +118,25 @@ def select_log_session(df: pd.DataFrame) -> Optional[pd.Series]:
 
     return df.loc[input_, :]
 
+
 if __name__ == "__main__":
 
-    CLI=argparse.ArgumentParser()
+    CLI = argparse.ArgumentParser()
     CLI.add_argument(
-      "--how",
-      type=str,         
-      default='file',
-      help=f"select read option: {read_options_str}"
+        "--how",
+        type=str,
+        default="file",
+        help=f"select read option: {read_options_str}",
     )
     CLI.add_argument(
-      "--uuid",
-      type=str,         
-      default='',
-      help="UUID of log to fetch from redis"
+        "--uuid", type=str, default="", help="UUID of log to fetch from redis"
     )
     CLI.add_argument(
-      "-v", "--verbosity", 
-      type=str,         
-      default='info',
-      help="choose debug log level: DEBUG, INFO, WARNING, ERROR, CRITICAL"
+        "-v",
+        "--verbosity",
+        type=str,
+        default="info",
+        help="choose debug log level: DEBUG, INFO, WARNING, ERROR, CRITICAL",
     )
 
     args = CLI.parse_args()
@@ -138,33 +144,40 @@ if __name__ == "__main__":
     lines: List[dict] = []
 
     how: str = args.how.upper()
-    
-    if how == 'FILE':
+
+    if how == "FILE":
         lines = read_json_log_file(log_file)
 
-    elif how in ('REDIS', 'UUID'):
-        rs = redis.Redis(host=rk.REDIS_HOST, port=rk.REDIS_PORT, password=rk.REDIS_PASS, db=6)
+    elif how in ("REDIS", "UUID"):
+        rs = redis.Redis(
+            host=rk.REDIS_HOST, port=rk.REDIS_PORT, password=rk.REDIS_PASS, db=6
+        )
 
-        if how == 'REDIS':
+        if how == "REDIS":
             # get last logs per broker, instrument from postgres, and let user select what log file to load
             item = select_log_session(get_last_log_sessions(psession))
-            uuid = item.log_id
+            if item is not None:
+                uuid = item["log_id"]
+            else:
+                sys.exit()
 
-        elif how == 'UUID':
+        elif how == "UUID":
 
             assert args.uuid, f"please pass `uuid` flag to read from redis"
             uuid = args.uuid
-    
+
         lines = read_json_log_redis(str(uuid), rs=rs)
 
     else:
-        raise NotImplementedError(f"{args.how=} not implemented. Available: {read_options_str}")
+        raise NotImplementedError(
+            f"{args.how=} not implemented. Available: {read_options_str}"
+        )
 
     assert isinstance(lines, list)
 
     # set log verbosity
     verbosity = args.verbosity.upper()
-    log_level   = getattr(logging, verbosity)
+    log_level = getattr(logging, verbosity)
     logger.setLevel(log_level)
 
     # replay log
