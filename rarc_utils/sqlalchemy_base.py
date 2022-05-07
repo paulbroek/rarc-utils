@@ -5,20 +5,19 @@
     Like: creating async or blocking sessions, creating all models, getting all str models, get_or_create methods, ...
 """
 
-from typing import Optional, Dict, Any, Union, Callable, AsyncGenerator  # , List
-from abc import ABCMeta, abstractmethod  # , ABC
-import logging
 import asyncio
+import logging
+from abc import ABCMeta, abstractmethod  # , ABC
 from pprint import pprint
+from typing import Any, AsyncGenerator, Callable, Dict, Optional, Union  # , List
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.future import select
 
 # from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.future import select
+from sqlalchemy.orm import Session, sessionmaker
 
 from .misc import AttrDict
 
@@ -281,18 +280,14 @@ async def create_many(
     returnExisting=False,
     printCondition=None,
 ) -> Dict[str, Any]:
-    """create many of any model type: Character, Genre, Places, Author, ...
+    """Create many instances of any model.
 
     printCondition  print all items when this condition is met
-
-    Todo:   filtering out existing names only works for Category models,
-            author is unique by name + birth_date,
-            so it needs a different implementation
     """
-
     assert isinstance(items, dict)
     # async with async_session() as session:
     # first check if character names exist
+    # todo: do not query for all names!
     existingNames = await session.execute(select(getattr(model, nameAttr)))
     namesSet = set(items.keys())
     names = list(namesSet - set(existingNames.scalars()))

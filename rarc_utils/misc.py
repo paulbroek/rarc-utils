@@ -4,40 +4,39 @@
     miscellaneous methods used by rarc 
 """
 
-from typing import Dict, List, Tuple, Union, Optional, Set, Any, Deque
+import asyncio
+import configparser
 
 # import traceback
 import hashlib
-
-# import uuid
-from time import sleep  # , time_ns
-import os
-from datetime import datetime
-import logging
-from collections import defaultdict, ChainMap  # deque, namedtuple
-from functools import wraps, partial
-import configparser
-import signal
-import itertools
-import sys
-import random
 import importlib
-from importlib.metadata import version
+import itertools
+import logging
+import os
+import random
+import signal
 
 # import platform
 # import copy
 import subprocess
+import sys
+from collections import ChainMap, defaultdict  # deque, namedtuple
+from datetime import datetime
+from functools import partial, wraps
+from importlib.metadata import version
 from pathlib import Path
-import asyncio
 
-import requests
-import psutil
-import timeago
-import yaml
+# import uuid
+from time import sleep  # , time_ns
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union
 
 # from yapic import json
 import numpy as np
 import pandas as pd
+import psutil
+import requests
+import timeago
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -570,8 +569,7 @@ def get_key_or_none(d: Optional[dict], key: str) -> Optional[Any]:
 def unnest_dict(
     df, col: str, key: str, renameCol=None, fmt="{}_{}", assign=True, debug=False
 ) -> Union[str, Tuple[str, pd.Series]]:
-    """
-    unnest a dataframe column of dictionaries to a new column with dict values for key `key`
+    """Unnest a dataframe column of dictionaries to a new column with dict values for key `key`.
 
     df          dframe  dataframe to unnest
     col         str     dataframe column that contains dictionaries
@@ -635,8 +633,7 @@ def unnest_assign_cols(
     multiindexCols=False,
     debug=False,
 ) -> Tuple[List[str], pd.DataFrame]:
-    """
-    convert list of ('col','key') tuples to list of new col names and assigned dataframe
+    """Convert list of ('col','key') tuples to list of new col names and assigned dataframe.
 
     unnestList  if None, will try to unnest all keys in dict
     col         if passed, unnest this col
@@ -689,7 +686,7 @@ def unnest_assign_cols(
 
 
 def fmt_shape(shape: tuple) -> str:
-    """format shape of dataframe, so that big numbers are displayed in 10_000, 250_000, etc."""
+    """Format shape of dataframe, so that big numbers are displayed in 10_000, 250_000, etc."""
     assert isinstance(shape, tuple)
     inside = ", ".join([f"{x:_}" for x in shape])
     return "({})".format(inside)
@@ -710,7 +707,7 @@ def get_git_revision_short_hash() -> str:
 def elaps_df(
     call_hist: Deque[tuple] = None, byFunc=None, fmtPrec=None, drop=True
 ) -> pd.DataFrame:
-    """get elapsed dataframe
+    """Get elapsed dataframe.
 
     precision follows from the namedtuple field names, is it either time_ms or time_ns
 
@@ -724,7 +721,6 @@ def elaps_df(
         elaps_df(zp.call_hist).groupby('func').describe()
         elaps_df(zp.call_hist).groupby('func').describe(percentiles=(.25, .5, .7, .8, .9, .95)).T
     """
-
     assert call_hist is not None
     assert len(call_hist) > 0, "empty call history"
 
@@ -768,13 +764,12 @@ def elaps_df(
 
 
 def timeago_series(s: pd.Series) -> pd.Series:
-
+    """Apply timeago to Pandas Series object."""
     return s.map(lambda x: timeago.format(x, datetime.utcnow()))
 
 
 def trunc_msg(msg: Optional[str], maxlen=125, pfx="...") -> str:
-    """truncate a long msg, e.g. json string to {'a':2, ...}"""
-
+    """Truncate a long msg, e.g. json string to {'a':2, ...}."""
     assert isinstance(msg, (str, type(None))), f"{type(msg)=}, is not str"
 
     if msg is None:
@@ -787,8 +782,8 @@ def trunc_msg(msg: Optional[str], maxlen=125, pfx="...") -> str:
     return f"{msg[:maxlen]}{pfx}"
 
 
-def size_mb(obj: Any, precision=2) -> float:
-    """get size in mb for any python object, including nested dicts"""
+def sizemb(obj: Any, precision=2) -> float:
+    """Get size in mb for any python object, including nested dicts."""
     size = 0
     if isinstance(obj, dict):
         for _, v in obj.items():
