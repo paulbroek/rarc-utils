@@ -6,7 +6,6 @@
 
 import asyncio
 import configparser
-
 # import traceback
 import hashlib
 import importlib
@@ -15,7 +14,6 @@ import logging
 import os
 import random
 import signal
-
 # import platform
 # import copy
 import subprocess
@@ -25,7 +23,6 @@ from datetime import datetime
 from functools import partial, wraps
 from importlib.metadata import version
 from pathlib import Path
-
 # import uuid
 from time import sleep  # , time_ns
 from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union
@@ -782,7 +779,7 @@ def trunc_msg(msg: Optional[str], maxlen=125, pfx="...") -> str:
     return f"{msg[:maxlen]}{pfx}"
 
 
-def sizemb(obj: Any, precision=2) -> float:
+def size_mb(obj: Any, precision=2) -> float:
     """Get size in mb for any python object, including nested dicts."""
     size = 0
     if isinstance(obj, dict):
