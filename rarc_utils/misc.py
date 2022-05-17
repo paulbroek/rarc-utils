@@ -1,12 +1,7 @@
-""" 
-    misc.py
-
-    miscellaneous methods used by rarc 
-"""
+"""misc.py, miscellaneous methods used by rarc."""
 
 import asyncio
 import configparser
-# import traceback
 import hashlib
 import importlib
 import itertools
@@ -14,20 +9,16 @@ import logging
 import os
 import random
 import signal
-# import platform
-# import copy
 import subprocess
 import sys
-from collections import ChainMap, defaultdict  # deque, namedtuple
+from collections import ChainMap, defaultdict
 from datetime import datetime
 from functools import partial, wraps
 from importlib.metadata import version
 from pathlib import Path
-# import uuid
-from time import sleep  # , time_ns
+from time import sleep
 from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union
 
-# from yapic import json
 import numpy as np
 import pandas as pd
 import psutil
@@ -38,6 +29,16 @@ import yaml
 logger = logging.getLogger(__name__)
 
 cfg = configparser.ConfigParser()
+
+
+def load_yaml(filepath):
+    """Import YAML config file."""
+    with open(filepath, "r") as stream:
+        try:
+            return yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+
 
 # using hash algorithm that produces the same hash, so that objects send from different sources have the same hash when the dicts are equal in values
 def hash_accross_the_same(item):
