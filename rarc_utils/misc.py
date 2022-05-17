@@ -11,7 +11,7 @@ import random
 import signal
 import subprocess
 import sys
-from collections import ChainMap, defaultdict
+from collections import ChainMap
 from datetime import datetime
 from functools import partial, wraps
 from importlib.metadata import version
@@ -31,13 +31,25 @@ logger = logging.getLogger(__name__)
 cfg = configparser.ConfigParser()
 
 
-def load_yaml(filepath):
+def load_yaml(filepath: Union[str, Path]):
     """Import YAML config file."""
-    with open(filepath, "r") as stream:
+    with open(filepath, "r", encoding="utf-8") as stream:
         try:
-            return yaml.safe_load(stream)
+            config = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             print(exc)
+
+    return config
+
+
+# def loadConfig(configFile=None):
+#     assert configFile is not None
+
+#     with open(configFile, "r") as f:
+#         config = yaml.load(f, Loader=yaml.FullLoader)
+#         logger.info(f"loaded {configFile=}")
+
+#     return config
 
 
 # using hash algorithm that produces the same hash, so that objects send from different sources have the same hash when the dicts are equal in values
@@ -47,14 +59,14 @@ def hash_accross_the_same(item):
     return h.hexdigest()
 
 
-class KeyDict(defaultdict):
-    def __missing__(self, key):
-        return key
+# class KeyDict(defaultdict):
+#     def __missing__(self, key):
+#         return key
 
 
-class CapKeyDict(defaultdict):
-    def __missing__(self, key):
-        return key.capitalize()
+# class CapKeyDict(defaultdict):
+#     def __missing__(self, key):
+#         return key.capitalize()
 
 
 def reload_by_str():
@@ -159,7 +171,7 @@ def run_in_executor(f):
 
 
 class AttrDict(dict):
-    """emulate js object: dict.attr equals dict['attr']"""
+    """Emulate js object: dict.attr equals dict['attr']."""
 
     def __init__(self, d=None):
         super().__init__()
@@ -229,26 +241,23 @@ du_dir_ = lambda path: sum(f.stat().st_size for f in path.glob("**/*") if f.is_f
 
 
 def du_dir(path: Path) -> int:
-    """return total disk usage of path"""
-
+    """Return total disk usage of path."""
     return du_dir_(path)
 
 
 def dir_(obj, not_starts=("__", "_")) -> List[str]:
-    """alternative dir() method that only shows public attributes"""
-
+    """Alternative dir() method that only shows public attributes."""
     return [a for a in dir(obj) if not a.startswith(not_starts)]
 
 
 def mem_usage(prec=2, power=2) -> int:
-    """get memory usage of this process, and therefore this python session
+    """Get memory usage of this process, and therefore this python session.
 
     power   1024**2 is mb, 1024**3 is gb, etc.
 
     alternative way is running bash directly in ipython, but only works when using only one session:
     !ps aux | grep python | awk '{sum=sum+$6}; END {print sum/1024 " MB"}'
     """
-
     process = psutil.Process(os.getpid())
     bytes_usage = process.memory_info().rss
     fmt_usage = bytes_usage / 1024**power
@@ -274,8 +283,7 @@ def colab_auto_refresh():
 
 
 def check_version(package: str, lib, reqVersion=False, askUser=True):
-    """compares local version of a package with that listed on pypi.org. for ccxt lib it's crucial that you always update before running this bot."""
-
+    """Compare local version of a package with that listed on pypi.org. for ccxt lib it's crucial that you always update before running this bot."""
     # fetch latest PyPi version
     url = f"https://pypi.org/pypi/{package}/json"
     try:
@@ -329,11 +337,10 @@ def load_keys(
     secretsDir="/home/paul/repos/rarc-secrets",
     file="/rarc/config/keys.cfg",
 ):
-    """load cfg keys to dictionary
+    """Load cfg keys to dictionary.
 
     capitalize  capitalize dict keys
     """
-
     file = secretsDir + file
     if not capitalize:
         brokers = [b.lower() for b in brokers]
@@ -362,14 +369,12 @@ def load_keys(
 
 
 def chainGatherRes(res: List[dict], uniqueKeys=True) -> dict:
-    """
-    chain asyncio.gather results
+    """Chain asyncio.gather results.
 
     asyncio.gather(*cors) returns a list of results per coroutine
     his methods chains the results, and checks if there are duplicate keys
     since ChainMap would overwrite the values
     """
-
     assert isinstance(res, list), f"{type(res)=} is not list"
 
     if uniqueKeys:
@@ -383,18 +388,21 @@ def chainGatherRes(res: List[dict], uniqueKeys=True) -> dict:
 
 
 def format_time(t) -> str:
-    """Return a formatted time string 'HH:MM:SS
-    based on a numeric time() value"""
+    """Return a formatted time string 'HH:MM:SS'.
 
+    based on a numeric time() value
+    """
     m, s = divmod(t, 60)
     h, m = divmod(m, 60)
     return f"{h:0>2.0f}:{m:0>2.0f}:{s:0>2.0f}"
 
 
 class MultipleTimeSeriesCV:
-    """Generates tuples of train_idx, test_idx pairs
+    """Generate tuples of train_idx, test_idx pairs.
+
     Assumes the MultiIndex contains levels 'symbol' and 'date'
-    purges overlapping outcomes"""
+    purges overlapping outcomes
+    """
 
     def __init__(
         self,
@@ -448,7 +456,8 @@ class MultipleTimeSeriesCV:
 
 
 def round_to_power(num: Union[float, int], power: int) -> Union[float, int]:
-    """
+    """Round number to nearest power.
+
     round 59_354 -> 59_000, power=3
     round 59_354 -> 59_300, power=2
 
@@ -465,7 +474,8 @@ def round_to_power(num: Union[float, int], power: int) -> Union[float, int]:
 
 
 class FlexibleTimeSeriesCV:
-    """Generates tuples of train_idx, test_idx
+    """Generate tuples of train_idx, test_idx.
+
     uses datetimeindex with split, so it always
     return valid tuples
 
@@ -525,18 +535,8 @@ class FlexibleTimeSeriesCV:
         return self.n_splits
 
 
-def loadConfig(configFile=None):
-    assert configFile is not None
-
-    with open(configFile, "r") as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-        logger.info(f"loaded {configFile=}")
-
-    return config
-
-
 def getPublicIP(url="https://api.ipify.org", n=0, max_retry=5) -> Optional[str]:
-
+    """Get public IP address from API endpoint."""
     try:
         resp = requests.get(url)
         res = resp.content.decode("utf8")
@@ -578,7 +578,6 @@ def unnest_dict(
     debug       bool    print df.shape after assigning
 
     examples:
-
         unnest_dict(df, 'meta', 'field', assign=False, debug=False)
 
     unnests
@@ -589,7 +588,6 @@ def unnest_dict(
         project_number:     '653959998010'
 
     """
-
     assert isinstance(df, pd.DataFrame)
 
     if len(df) > 0:
@@ -640,7 +638,6 @@ def unnest_assign_cols(
         unnestList = [('project','id'), ('service','description'), ('sku','description'), ]
         addedCols, df = unnest_assign_cols(df, unnestList)
     """
-
     assert isinstance(df, pd.DataFrame)
     assert isinstance(unnestList, (list, type(None)))
 
