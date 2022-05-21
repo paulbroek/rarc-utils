@@ -688,10 +688,12 @@ def fmt_shape(shape: tuple) -> str:
 
 
 def get_git_revision_hash() -> str:
+    """Get git revision hash."""
     return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
 
 
 def get_git_revision_short_hash() -> str:
+    """Get git revision hash (short)."""
     return (
         subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
         .decode("ascii")
