@@ -1,5 +1,5 @@
 # import versioneer # https://github.com/python-versioneer/python-versioneer/blob/master/INSTALL.md
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 requires = [
     "yapic.json>=1.7.0",
@@ -14,6 +14,7 @@ requires = [
     "sqlalchemy>=1.4.23",
     "PyYAML>=5.4.1",
     "python-json-logger>=2.0.2",
+    "lz4=>4.0.1",
 ]
 
 setup(
