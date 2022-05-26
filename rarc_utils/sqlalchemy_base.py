@@ -9,13 +9,13 @@ import asyncio
 import logging
 from abc import ABCMeta, abstractmethod  # , ABC
 from pprint import pprint
-from typing import Any, AsyncGenerator, Callable, Dict, Optional, Union  # , List
+from typing import (Any, AsyncGenerator, Callable, Dict, Optional,  # , List
+                    Union)
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.future import select
-
 # from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -253,22 +253,7 @@ def create_instance(model, item: Union[dict, Any]):
     except Exception as e:
         logger.warning(f"cannot create '{model.__tablename__}'. {str(e)=} \n{item=}")
         raise
-
-
-# async def aget_or_create_many(asession: AsyncSession, model, items: List[dict]):
-
-#     async with asession() as session:
-#         cors = [aaget_or_create(session, model, **item) for item in items]
-#         rr = await asyncio.gather(*cors) # doesn't work, postgres get over requested
-#         # log how many items were newly created
-#         nnew = sum([r[1] for r in rr])
-
-#         if nnew:
-#             MODELS = model + 's' if nnew > 1 else model
-#             logger.info(f"created {nnew:_} new {MODELS}")
-
-#         return [r[0] for r in rr]
-
+        
 
 async def create_many(
     session: AsyncSession,
@@ -280,7 +265,7 @@ async def create_many(
     returnExisting=False,
     printCondition=None,
 ) -> Dict[str, Any]:
-    """Create many instances of any model.
+    """Create many instances of a model.
 
     printCondition  print all items when this condition is met
     """
