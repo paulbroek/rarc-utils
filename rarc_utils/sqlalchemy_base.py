@@ -59,18 +59,18 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
 
     """ TO-DO: make sure to check for a backup file first, as it deletes all psql data """
 
-    if not force:
-        if (
-            input(
-                "are you sure you want to recreate all models? Use alembic for migrations, \
-                and run this function only for a total model reset. Pres 'y' to confirm: "
-            )
-            != "y"
-        ):
-            print("leaving")
-            return
-
     if dropFirst:
+        if not force:
+            if (
+                input(
+                    "are you sure you want to recreate all models? Use alembic for migrations, \
+                    and run this function only for a total model reset. Pres 'y' to confirm: "
+                )
+                != "y"
+            ):
+                print("leaving")
+                return
+                
         async with engine.begin() as conn:
             await conn.run_sync(
                 base.metadata.drop_all
@@ -253,7 +253,7 @@ def create_instance(model, item: Union[dict, Any]):
     except Exception as e:
         logger.warning(f"cannot create '{model.__tablename__}'. {str(e)=} \n{item=}")
         raise
-        
+
 
 async def create_many(
     session: AsyncSession,
