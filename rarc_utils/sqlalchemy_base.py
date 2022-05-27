@@ -1,33 +1,27 @@
-""" slqalchemy.py
-    
-    utility functions that are used frequently when working with SQLAlchemy
+"""sqlqalchemy_base.py, utility functions that are frequently used when working with SQLAlchemy.
 
-    Like: creating async or blocking sessions, creating all models, getting all str models, get_or_create methods, ...
+e.g.: creating async or blocking sessions, creating all models, getting all str models, get_or_create methods, ...
 """
 
 import asyncio
 import logging
-from abc import ABCMeta, abstractmethod  # , ABC
+from abc import ABCMeta, abstractmethod
 from pprint import pprint
-from typing import (Any, AsyncGenerator, Callable, Dict, Optional,  # , List
-                    Union)
+from typing import Any, AsyncGenerator, Callable, Dict, Optional, Union
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.future import select
-# from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
 from .misc import AttrDict
 
 logger = logging.getLogger(__name__)
 
-# Base = declarative_base()
 
-
-class UtilityBase(object):
-    """adds helper methods to SQLAlchemy `Base` class"""
+class UtilityBase:
+    """Adds helper methods to SQLAlchemy `Base` class."""
 
     def as_dict(self) -> Dict[str, Any]:
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -70,7 +64,7 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
             ):
                 print("leaving")
                 return
-                
+
         async with engine.begin() as conn:
             await conn.run_sync(
                 base.metadata.drop_all
@@ -81,8 +75,7 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
 
 
 def get_session(psql: AttrDict) -> sessionmaker:
-    """create normal (bocking) connection"""
-
+    """Create normal (bocking) connection."""
     engine = create_engine(
         f"postgresql://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
         echo=False,  # shows double log output
@@ -99,6 +92,7 @@ def get_session(psql: AttrDict) -> sessionmaker:
 
 
 def get_async_session(psql: AttrDict) -> sessionmaker:
+    """Create async connection."""
     engine = create_async_engine(
         f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
         echo=False,  # shows double log output
@@ -113,7 +107,7 @@ def get_async_session(psql: AttrDict) -> sessionmaker:
 
 # Dependency
 def get_async_db(psql: AttrDict) -> Callable:
-
+    """Create async db."""
     # todo: add dep to repos like scrape_goodreads
     from fastapi import HTTPException
 
@@ -168,7 +162,7 @@ def get_str_mappings(session: Session, models=None) -> Dict[str, Any]:
     assert models is not None
     assert isinstance(session, Session), f"{type(session)=} is not Session"
 
-    str_mappings = dict()
+    str_mappings = {}
     for model in models:
         # print(f"{model=}")
         modelName = model.__tablename__
@@ -179,7 +173,8 @@ def get_str_mappings(session: Session, models=None) -> Dict[str, Any]:
 
 
 def get_or_create(session: Session, model, item=None, filter_by=None, **kwargs):
-    """get item from postgres, if it exists by `filter_by` OR `kwargs`
+    """Get item from postgres, if it exists by `filter_by` OR `kwargs`.
+
     if it doesn't exist, create and return it
     """
     if item is not None:
@@ -215,7 +210,7 @@ async def aget(
 
 
 async def aaget_or_create(session: AsyncSession, model, **kwargs):
-    """same as aget_or_create, but also returns bool flag if item was created"""
+    """Is similar to aget_or_create, but also returns bool flag if item was created."""
     query = select(model).filter_by(**kwargs)
 
     res = await session.execute(query)

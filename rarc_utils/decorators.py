@@ -1,19 +1,17 @@
-""" decorators.py
+"""decorators.py, decorator utility functions."""
 
-    decorator utility functions
-"""
-
-from typing import Tuple, Callable
-from time import time, time_ns, sleep
-import platform
-import copy
-from collections import namedtuple, deque
-from functools import wraps
-import logging
-from datetime import datetime
-import inspect
-import traceback
 import asyncio
+import copy
+import inspect
+import logging
+import platform
+import traceback
+from collections import deque, namedtuple
+from datetime import datetime
+from functools import wraps
+from time import sleep, time, time_ns
+from typing import Callable, Tuple
+
 import pandas as pd
 from yapic import json
 
@@ -23,7 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 def check_running(method):
-
+    """Check if `is_running` flag is true.
+    
+    decorator
+    """
     func_name = method.__name__
 
     @wraps(method)
@@ -45,11 +46,10 @@ def check_running(method):
 
 
 def save_ncall(log_once_per_n=None):
-    """save_ncall decorator
+    """Show `log_once_per_n` the number of times a method was called.
 
-    shows 'log_once_per_n' the number of times a method was called
+    decorator
     """
-
     def decorator(method):
         ncall = 0
         lastcall = 0
@@ -85,7 +85,8 @@ def save_ncall(log_once_per_n=None):
 
 
 def wait_for_lock(variable_name, every=1, max_=8):
-    """waits for a flag to become true, and then runs the method
+    """Wait for a flag to become true, and then run the method.
+
     todo: or make async, and schedule the task?
 
     assumes:
@@ -94,7 +95,6 @@ def wait_for_lock(variable_name, every=1, max_=8):
     uses:
         self.lock
     """
-
     def decorator(method):
         @wraps(method)
         def wait_for(*args, **kw):
@@ -137,8 +137,7 @@ def wait_for_lock(variable_name, every=1, max_=8):
 
 
 def timet(f):
-    """simpler decorator than timeit"""
-
+    """Simpler decorator than timeit."""
     @wraps(f)
     def wrap(*args, **kw):
         ts = time()
@@ -153,7 +152,7 @@ def timet(f):
 
 
 def timeit(log_once_per_n=None, reset_hist=False, save_hist=False):
-    """timeit decorator
+    """Timeit decorator.
 
     make sure not to reset logger BEFORE importing this file
 
@@ -162,7 +161,6 @@ def timeit(log_once_per_n=None, reset_hist=False, save_hist=False):
     reset_hist      if True, resets elaps history every 'log_once_per_n'
     save_hist       if True, saves (func, time, elaps) namedtuple to self.call_hist
     """
-
     PRECISION = "ns"  # 'ms'
     time_func = time_ns if PRECISION == "ns" else time
 
@@ -299,9 +297,9 @@ try_catch_any = get_try_catch_decorator((Exception), default_value="")
 
 
 def reconnect_mysql(func: Callable) -> Callable:
-    """decorator
+    """Reconnect to MySQL if disconnected.
 
-    reconnects to MySQL if disconnected
+    decorator
     """
 
     @wraps(func)
@@ -323,9 +321,9 @@ def reconnect_mysql(func: Callable) -> Callable:
 
 
 def reconnect(func: Callable) -> Callable:
-    """decorator
+    """Reconnect to redis if selected_db does not match 'db'.
 
-    reconnects to redis if selected_db does not match 'db'
+    decorator
     """
 
     @wraps(func)
@@ -356,36 +354,22 @@ def reconnect(func: Callable) -> Callable:
 
 
 def elapsed_broker(func: Callable) -> Callable:
-    """decorator
+    """Save the time elapsed for a function call.
 
-    save the time elapsed for a function call,
-    so that you can
+    decorator
 
     TO-DO: doesn't work now since the coroutine is entered from start, resulting in large elapsed times.
     """
-
-    # async def process(func, *args, **params):
-    #     if asyncio.iscoroutinefunction(func):
-    #         #print('this function is a coroutine: {}'.format(func.__name__))
-    #         return await func(*args, **params)
-    #     else:
-    #         #print('this is not a coroutine')
-    #         return func(*args, **params)
-
     @wraps(func)
     async def elaps_broker(self, *args, **kwargs):
 
         t0 = time()
 
         try:
-            # func(self, *args, **kwargs)
-
             if asyncio.iscoroutinefunction(func):
                 return await func.__call__(self, *args, **kwargs)
             else:
                 return func.__call__(self, *args, **kwargs)
-
-            # await process(func, *args, **kwargs)
 
         except Exception as e:
 
@@ -403,16 +387,14 @@ def elapsed_broker(func: Callable) -> Callable:
             # self = args[0]
             self.brokerCalls[exchange_name].append(elaps)
 
-    # msg = f'{elaps=:.2f}'
-    # print(msg)
-    # logger.info(msg)
-
     return elaps_broker
 
 
 def register_with_redis(func: Callable) -> Callable:
-    """decorator
-    register a job/function with redis so that other processes can not run jobs simultaneously
+    """Register a job/function with redis so that other processes can not run jobs simultaneously.
+
+    decorator
+
     TO-DO (✓): permanently save jobs so that you can see when the last run was. this means converting key:value to key:sorted_set (done)
     """
     db = 2
@@ -536,8 +518,10 @@ def register_with_redis(func: Callable) -> Callable:
 
 
 def saveLastCall(func: Callable) -> Callable:
-    """saveLastCall decorator"""
+    """Save last function calling time to `self.lastFuncCalls`.
 
+    decorator
+    """
     @wraps(func)
     def saveCall(self, *args, **kwargs):
         res = func(self, *args, **kwargs)
@@ -548,16 +532,16 @@ def saveLastCall(func: Callable) -> Callable:
 
 
 def colsAdded(x_or_func=None, return_cols=0, print_less_than=5, debug=0) -> Callable:
-    """colsAdded decorator
+    """Return the columns that have been added to a dataframe, during a dataframe operation.
 
-    returns the columns that have been added to a dataframe, during a dataframe operation
+    decorator
+
     assumes that first or second argument dataframe type is the dataframe being manipulated (so can be used with classmethods)
 
     return_cols         return list of added columns along with wrapped functions return value. if false, returns only wrapped functions return value
     print_less_than     if less than 'print_less_than' columns are added, all names are logged
 
     """
-
     def _colsAdded(func):
         @wraps(func)
         def wrapper(*args, **kwargs) -> Tuple[pd.DataFrame, pd.Index]:
@@ -604,6 +588,10 @@ def colsAdded(x_or_func=None, return_cols=0, print_less_than=5, debug=0) -> Call
 
 
 def rowsReduced(func):
+    """Return the number of rows that were removed from a dataframe, during a dataframe operation.
+
+    decorator
+    """
     @wraps(func)
     def _rowsReduced(*args, **kwargs):
 

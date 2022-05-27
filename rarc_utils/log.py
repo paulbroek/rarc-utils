@@ -1,33 +1,28 @@
-""" log.py 
+"""log.py, implement custom loggers for CLI programs.
 
-    implement custom loggers for both small CLI programs and ccxt_trade
-    supports: indented formatting, colored formatting, save to file, save all log records to pandas, and more
+supports: indented formatting, colored formatting, save to file, save all log records to pandas, and more
 """
 
-from typing import List, Tuple, Dict, Any
-import logging
-from datetime import datetime
-
-# import importlib
-import os
-import sys
-import re
-from collections import defaultdict
-import textwrap
 import copy
-from itertools import chain
-from functools import partial, partialmethod
 import json
-import lz4.frame
+import logging
+import os
+import re
+import sys
+import textwrap
+from collections import defaultdict
+from datetime import datetime
+from functools import partial, partialmethod
+from itertools import chain
+from typing import Any, Dict, List, Tuple
 
 import coloredlogs
-from pythonjsonlogger import jsonlogger
-
-import pandas as pd
+import lz4.frame
 import numpy as np
-
+import pandas as pd
 from humanfriendly.compat import coerce_string
-from humanfriendly.terminal import ansi_wrap  # , ANSI_COLOR_CODES
+from humanfriendly.terminal import ansi_wrap
+from pythonjsonlogger import jsonlogger
 
 JSON_LOGS = "json_logs"
 

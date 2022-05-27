@@ -42,16 +42,6 @@ def load_yaml(filepath: Union[str, Path]):
     return config
 
 
-# def loadConfig(configFile=None):
-#     assert configFile is not None
-
-#     with open(configFile, "r") as f:
-#         config = yaml.load(f, Loader=yaml.FullLoader)
-#         logger.info(f"loaded {configFile=}")
-
-#     return config
-
-
 # using hash algorithm that produces the same hash, so that objects send from different sources have the same hash when the dicts are equal in values
 def hash_accross_the_same(item):
     h = hashlib.new("ripemd160")
@@ -59,18 +49,9 @@ def hash_accross_the_same(item):
     return h.hexdigest()
 
 
-# class KeyDict(defaultdict):
-#     def __missing__(self, key):
-#         return key
-
-
-# class CapKeyDict(defaultdict):
-#     def __missing__(self, key):
-#         return key.capitalize()
-
-
 def reload_by_str():
-    """replaces all reload_XX methods below, pass a str module name and
+    """Replace all reload_XX methods below, pass a str module name.
+
     this method assumes the structures of the loaded module is: df_methods.df_methods
     """
 
@@ -93,7 +74,7 @@ def reload_by_str():
 
 
 def reload_cm():
-    """returns reload method, so it can be executed in the right context / path"""
+    """Return reload method, so it can be executed in the right context / path."""
 
     def reload():
         import ccxt_methods
@@ -107,7 +88,7 @@ def reload_cm():
 
 
 def reload_dm():
-    """returns reload method, so it can be executed in the right context / path
+    """Return reload method, so it can be executed in the right context / path.
 
     can import directly from folder or as a module
     """
@@ -148,7 +129,7 @@ def reload_fm():
 
 
 def reload_pm():
-    """returns reload method, so it can be executed in the right context / path"""
+    """Return reload method, so it can be executed in the right context / path."""
 
     def reload():
         import plot_methods

@@ -1,12 +1,8 @@
-""" telegram_bot.py 
-
-    utility methods for telegram bots
-"""
+"""Telegram_bot.py, utility methods for telegram bots."""
 
 
 def toEscapeMsg(msg: str) -> str:
-    """markdown messages cannot contain markers of style like _ * = etc."""
-
+    """Escape all symbols that have special meaning in Markdown."""
     return (
         msg.replace("[", "\\[")
         .replace("(", "\\(")
