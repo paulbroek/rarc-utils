@@ -253,7 +253,7 @@ def create_instance(model, item: Union[dict, Any]):
 async def create_many(
     session: AsyncSession,
     model,
-    items: Dict[str, dict],
+    items: Dict[Union[str, int], dict],
     nameAttr="name",
     debug=False,
     many=True,
@@ -265,7 +265,6 @@ async def create_many(
     printCondition  print all items when this condition is met
     """
     assert isinstance(items, dict)
-    # async with async_session() as session:
     # first check if character names exist
     # todo: do not query for all names!
     existingNames = await session.execute(select(getattr(model, nameAttr)))
