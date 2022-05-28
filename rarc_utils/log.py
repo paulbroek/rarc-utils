@@ -28,7 +28,8 @@ JSON_LOGS = "json_logs"
 
 
 class MsgCountHandler(logging.Handler):
-    """Counts number of log calls per level type
+    """Count number of log calls per level type.
+
     Additionally alsos store every emitted message to a dataframe, for later inspection
     """
 
@@ -92,7 +93,7 @@ class MsgCountHandler(logging.Handler):
 
 
 class MultiLineFormatter1(logging.Formatter):
-    """format multiline log message with same indentation"""
+    """Format multiline log message with same indentation."""
 
     def format(self, record):
         # print('using format')
@@ -170,6 +171,7 @@ class MultiLineFormatter2(logging.Formatter):
 
 
 def loggingLevelNames() -> Tuple[Any, ...]:
+    """Return logging level names."""
     return tuple(
         logging.getLevelName(x)
         for x in range(1, 101)
@@ -178,16 +180,17 @@ def loggingLevelNames() -> Tuple[Any, ...]:
 
 
 def set_log_level(logger, fmt, level=logging.DEBUG) -> None:
-    """unfortunetaly, you have to reinstall coloredlogs"""
+    """Set log level and reinstall coloredlogs.
 
+    unfortunetaly, you have to reinstall coloredlogs
+    """
     logger.setLevel(level)
     coloredlogs.install(logger=logger, level=level, fmt=fmt, milliseconds=1)
 
 
 # add_log_level('URGENT', 25)
 def add_log_level(name: str, level: int) -> None:
-    """log level 'name' will be added to all logger, instantiated from logging.getLogger ()"""
-
+    """Add log level 'name' will to all loggers, instantiated from logging.getLogger()."""
     setattr(logging, name, level)
     newLevelAttr = getattr(logging, name)
     logging.addLevelName(newLevelAttr, name)
@@ -209,7 +212,7 @@ class Empty:
 def save_json_log_redis(
     json_lines: List[Dict[str, Any]], ls, key=JSON_LOGS, rs=None
 ) -> None:
-
+    """Save json log to redis."""
     assert rs is not None
     uuid = getattr(ls, "id")
     json_logs = json.dumps(json_lines).encode()
@@ -219,7 +222,7 @@ def save_json_log_redis(
 
 
 def read_json_log_redis(uuid: str, key=JSON_LOGS, rs=None) -> List[Dict[str, Any]]:
-
+    """Read json log from redis."""
     assert rs is not None
     compr_log: bytes = rs.hget(key, uuid)
     assert compr_log is not None, f"cannot find log {uuid}, try different uuid"
@@ -233,8 +236,7 @@ def read_json_log_redis(uuid: str, key=JSON_LOGS, rs=None) -> List[Dict[str, Any
 
 
 def read_json_log_file(log_file: str) -> List[Dict[str, Any]]:
-    """read json log file, every line contains a json log message"""
-
+    """Read json log file, every line contains a json log message."""
     renameDict = dict(message="msg")
 
     lines = []
@@ -261,8 +263,7 @@ def setup_logger(
     msgWidth=80,
     color=False,
 ):
-    """see https://docs.python.org/2/library/logging.html#logrecord-attributes
-    for a list of LogRecord attributes
+    """See https://docs.python.org/2/library/logging.html#logrecord-attributes for a list of LogRecord attributes.
 
     usage:
         logger = log.setup_logger(cmdLevel=getattr(logging, verbosity), brokers=brokers, save_to_file=1, savePandas=1, fmt=)
@@ -397,10 +398,7 @@ def setupCCXTTradeLogger(
     msgWidth=80,
     color=False,
 ):
-    """see https://docs.python.org/2/library/logging.html#logrecord-attributes
-    for a list of LogRecord attributes
-    """
-
+    """See https://docs.python.org/2/library/logging.html#logrecord-attributes for a list of LogRecord attributes."""
     assert not (saveRotatingFile and saveFile)
 
     # ugly code, don't reset logger in this way

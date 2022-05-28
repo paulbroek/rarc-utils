@@ -1,4 +1,4 @@
-"""misc.py, miscellaneous methods used by rarc."""
+"""misc.py, miscellaneous utility methods."""
 
 import asyncio
 import configparser
@@ -42,26 +42,30 @@ def load_yaml(filepath: Union[str, Path]):
     return config
 
 
-# using hash algorithm that produces the same hash, so that objects send from different sources have the same hash when the dicts are equal in values
 def hash_accross_the_same(item):
+    """Use hash algorithm to produce same hash.
+
+    so that objects send from different sources have the same hash when the dicts are equal in values
+    """
     h = hashlib.new("ripemd160")
     h.update(item.encode())
     return h.hexdigest()
 
 
-def reload_by_str():
+def reload_submodule():
     """Replace all reload_XX methods below, pass a str module name.
 
     this method assumes the structures of the loaded module is: df_methods.df_methods
+
+    Usage:
+        cm = reload_submodule()(ccxt_methods)
     """
 
-    def reload():
-        import ccxt_methods
+    def reload(module):
 
-        importlib.reload(ccxt_methods)
-        from ccxt_methods import ccxt_methods as cm
+        importlib.reload(module)
 
-        return cm
+        return getattr(module, module.__name__)
 
     # this works in jupyter notebook:
 
@@ -73,76 +77,78 @@ def reload_by_str():
     return reload
 
 
-def reload_cm():
-    """Return reload method, so it can be executed in the right context / path."""
+# def reload_cm():
+#     """Return reload method, so it can be executed in the right context / path."""
 
-    def reload():
-        import ccxt_methods
+#     def reload():
+#         import ccxt_methods
 
-        importlib.reload(ccxt_methods)
-        from ccxt_methods import ccxt_methods as cm
+#         importlib.reload(ccxt_methods)
+#         from ccxt_methods import ccxt_methods as cm
 
-        return cm
+#         return cm
 
-    return reload
-
-
-def reload_dm():
-    """Return reload method, so it can be executed in the right context / path.
-
-    can import directly from folder or as a module
-    """
-
-    def reload():
-        as_module = False
-        try:
-            import df_methods
-        except ModuleNotFoundError:
-            import rarc.df_methods as df_methods
-
-            as_module = True
-
-        importlib.reload(df_methods)
-
-        if as_module:
-            from rarc.df_methods import df_methods as dm
-        else:
-            from df_methods import df_methods as dm
-
-        return dm
-
-    return reload
+#     return reload
 
 
-def reload_fm():
-    """returns reload method, so it can be executed in the right context / path"""
+# def reload_dm():
+#     """Return reload method, so it can be executed in the right context / path.
 
-    def reload():
-        import feature_methods
+#     can import directly from folder or as a module
+#     """
 
-        importlib.reload(feature_methods)
-        from feature_methods import feature_methods as fm
+#     def reload():
+#         as_module = False
+#         try:
+#             import df_methods
+#         except ModuleNotFoundError:
+#             import rarc.df_methods as df_methods
 
-        return fm
+#             as_module = True
 
-    return reload
+#         importlib.reload(df_methods)
+
+#         if as_module:
+#             from rarc.df_methods import df_methods as dm
+#         else:
+#             from df_methods import df_methods as dm
+
+#         return dm
+
+#     return reload
 
 
-def reload_pm():
-    """Return reload method, so it can be executed in the right context / path."""
+# def reload_fm():
+#     """returns reload method, so it can be executed in the right context / path"""
 
-    def reload():
-        import plot_methods
+#     def reload():
+#         import feature_methods
 
-        importlib.reload(plot_methods)
-        from plot_methods import plot_methods as pm
+#         importlib.reload(feature_methods)
+#         from feature_methods import feature_methods as fm
 
-        return pm
+#         return fm
 
-    return reload
+#     return reload
+
+
+# def reload_pm():
+#     """Return reload method, so it can be executed in the right context / path."""
+
+#     def reload():
+#         import plot_methods
+
+#         importlib.reload(plot_methods)
+#         from plot_methods import plot_methods as pm
+
+#         return pm
+
+#     return reload
 
 
 def run_in_executor(f):
+    """Run function in executor."""
+
     @wraps(f)
     def inner(*args, **kwargs):
         loop = asyncio.get_running_loop()
@@ -152,7 +158,7 @@ def run_in_executor(f):
 
 
 class AttrDict(dict):
-    """Emulate js object: dict.attr equals dict['attr']."""
+    """Emulate js object: dict.attr === dict['attr']."""
 
     def __init__(self, d=None):
         super().__init__()
@@ -175,17 +181,18 @@ class AttrDict(dict):
 
 
 # dict of signal codes
-sigd = {getattr(signal, n): n for n in dir(signal) if n.startswith("SIG")}
+SIGD = {getattr(signal, n): n for n in dir(signal) if n.startswith("SIG")}
 
 
 def handle_exit(sigNum, stackFrame, addDate=0, andPrint=0):
-    sigName = sigd.get(sigNum, "undefined")
+    """Handle exiting of program."""
+    sigName = SIGD.get(sigNum, "undefined")
     dash = "------------------"
     dtstr = ""
     if addDate:
         dtstr = datetime.utcnow().strftime("%Y:%m:%d %H:%M:%S ")
     msg = f"{dash} {dtstr}EXITING ({sigNum=} {sigName=}) {dash}"  #  {stackFrame=}
-    lenmsg = len(msg)
+    # lenmsg = len(msg)
     # msgs = ['', lenmsg * '-', msg, lenmsg * '-']
     # msgs = [lenmsg * '-', msg, lenmsg * '-']
     msgs = [msg]
@@ -202,11 +209,13 @@ def handle_exit(sigNum, stackFrame, addDate=0, andPrint=0):
 
 
 def get_random_df(arcres: Dict[str, pd.DataFrame]) -> Tuple[str, pd.DataFrame]:
+    """Get random dataframe from dictionary of dataframes."""
     return random.choice(list(arcres.items()))
 
 
 def get_sample(d: dict, n=3) -> dict:
-    """take sample of dictionary, for printing purposes
+    """Take sample of dictionary, for printing.
+
     n   unique random elements to choose, if n > len(d),
         return the original dict
     """
@@ -334,7 +343,7 @@ def load_keys(
 
         print(f"cfg keys: {list(cfg.keys())}")
         # keys = defaultdict(dict) # dangerous, any read will give a return value
-        keys = {b: dict() for b in brokers}
+        keys = {b: {} for b in brokers}
         for broker in brokers:
             for what in ("apiKey", "secret", "password"):
                 if (info := cfg.get(broker.lower(), what, fallback="")) != "":
@@ -742,7 +751,7 @@ def elaps_df(
 
 
 def timeago_series(s: pd.Series) -> pd.Series:
-    """Apply timeago to Pandas Series object."""
+    """Apply timeago to pandas.Series object."""
     return s.map(lambda x: timeago.format(x, datetime.utcnow()))
 
 

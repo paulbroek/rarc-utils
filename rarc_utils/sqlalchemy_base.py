@@ -5,10 +5,11 @@ e.g.: creating async or blocking sessions, creating all models, getting all str 
 
 import asyncio
 import logging
-from abc import ABCMeta, abstractmethod
+# from abc import ABCMeta, abstractmethod
 from pprint import pprint
 from typing import Any, AsyncGenerator, Callable, Dict, Optional, Union
 
+from fastapi import HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -40,25 +41,14 @@ class UtilityBase:
         }
 
 
-class AbstractBase(metaclass=ABCMeta):  # ABC
-    @abstractmethod
-    def __repr__(self):
-        """force every child to have a __repr__ method
-        todo:
-            still don't know how to inherit from Base, UtilityBase and this AbstractBase, it throws error:
-            TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
-        """
-        pass
-
-
 async def async_main(psql, base, force=False, dropFirst=False) -> None:
+    """Create async engine for sqlalchemy."""
     engine = create_async_engine(
         f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
         echo=True,
     )
 
-    """ TO-DO: make sure to check for a backup file first, as it deletes all psql data """
-
+    # TO-DO: make sure to check for a backup file first, as it deletes all psql data
     if dropFirst:
         if not force:
             if (
@@ -114,8 +104,6 @@ def get_async_session(psql: AttrDict) -> sessionmaker:
 # Dependency
 def get_async_db(psql: AttrDict) -> Callable:
     """Create async db."""
-    # todo: add dep to repos like scrape_goodreads
-    from fastapi import HTTPException
 
     async def make_db() -> AsyncGenerator:
         async_session = get_async_session(psql)
@@ -137,12 +125,13 @@ def get_async_db(psql: AttrDict) -> Callable:
 
 
 async def run_in_session(async_session, func, **kwargs):
+    """Run in async session."""
     async with async_session() as session:
         return await func(session, **kwargs)
 
 
 async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
-
+    """Get string mappings asynchronously."""
     assert models is not None
 
     # not much faster than blocking version below
@@ -164,7 +153,7 @@ async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
 
 
 def get_str_mappings(session: Session, models=None) -> Dict[str, Any]:
-
+    """Get string mappings."""
     assert models is not None
     assert isinstance(session, Session), f"{type(session)=} is not Session"
 
@@ -204,7 +193,7 @@ def get_or_create(session: Session, model, item=None, filter_by=None, **kwargs):
 async def aget(
     session: AsyncSession, model, filter_by: Optional[dict] = None
 ) -> Optional["model"]:
-
+    """Get model instance asynchronously."""
     assert filter_by is not None
 
     query = select(model).filter_by(**filter_by)
@@ -237,13 +226,14 @@ async def aaget_or_create(session: AsyncSession, model, **kwargs):
 
 
 async def aget_or_create(session: AsyncSession, model, **kwargs):
-
+    """Create model instance asynchronously."""
     instance, _ = await aaget_or_create(session, model, **kwargs)
 
     return instance
 
 
 def create_instance(model, item: Union[dict, Any]):
+    """Create model instance."""
     # assert model is not None
 
     if isinstance(item, model):
