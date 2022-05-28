@@ -24,9 +24,15 @@ class UtilityBase:
     """Adds helper methods to SQLAlchemy `Base` class."""
 
     def as_dict(self) -> Dict[str, Any]:
+        """Format model as dictionary."""
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+    def json(self) -> dict:
+        """Alias for `as_dict`."""
+        return self.as_dict()   
+
     def as_big_dict(self) -> Dict[str, Any]:
+        """Format model as dictionary, including methods."""
         return {
             c: getattr(self, c)
             for c in dir(self)
