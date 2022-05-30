@@ -58,6 +58,7 @@ def reload_submodule():
     this method assumes the structures of the loaded module is: df_methods.df_methods
 
     Usage:
+        cm = reload_submodule()(df_methods)
         cm = reload_submodule()(ccxt_methods)
     """
 
