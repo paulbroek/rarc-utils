@@ -640,6 +640,8 @@ def unnest_assign_cols(
 
         unnestList = [(col, key) for key in all_keys]
 
+    assert col or unnestList, f"pass `col` or `unnestList`"
+
     nameColTuples = list(
         map(
             lambda x: unnest_dict(
