@@ -17,7 +17,8 @@ from functools import partial, wraps
 from importlib.metadata import version
 from pathlib import Path
 from time import sleep
-from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union
+from typing import (Any, Callable, Deque, Dict, List, Optional, Set, Tuple,
+                    Union)
 
 import numpy as np
 import pandas as pd
@@ -236,9 +237,20 @@ def du_dir(path: Path) -> int:
     return du_dir_(path)
 
 
-def dir_(obj, not_starts=("__", "_")) -> List[str]:
+def dir_(obj=None, not_starts=("__", "_")) -> List[str]:
     """Alternative dir() method that only shows public attributes."""
+    # calling to see children of object
     return [a for a in dir(obj) if not a.startswith(not_starts)]
+
+
+def dir__(not_starts=("__", "_")) -> Callable:
+    """Call dir() to see local variables, without (semi) private mmethods."""
+
+    def inner():
+        # todo: does not work, still calls dir right now
+        return [a for a in dir() if not a.startswith(not_starts)]
+
+    return inner
 
 
 def mem_usage(prec=2, power=2) -> int:
