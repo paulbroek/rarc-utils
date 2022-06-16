@@ -43,6 +43,23 @@ def load_yaml(filepath: Union[str, Path]):
     return config
 
 
+def plural(int_var: int, word: str) -> str:
+    """Correctly print message in plural.
+
+    E.g.:
+        downloaded 5 items
+    vs  downloaded 1 item
+
+    """
+    assert isinstance(int_var, int)
+    assert isinstance(word, str)
+
+    if int_var != 1:
+        return word + "s"
+
+    return word
+
+
 def hash_accross_the_same(item):
     """Use hash algorithm to produce same hash.
 
