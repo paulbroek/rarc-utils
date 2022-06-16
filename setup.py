@@ -19,7 +19,7 @@ requires = [
 
 setup(
     name="rarc_utils",
-    version="0.1.1",
+    version="0.1.2",
     description="Rarc utility functions",
     url="git@github.com:paulbroek/rarc-utils.git",
     author="Paul Broek",
@@ -27,6 +27,7 @@ setup(
     license="unlicense",
     install_requires=requires,
     # packages=['rarc'],
+    package_data={"rarc_utils": ["py.typed"]},
     packages=find_packages(exclude=["tests", "pymt5adapter", "logs"]),
     python_requires=">=3.7",  # 3.8 # remove 3.8 requirement so it can be installed in google colab
     zip_safe=False,
