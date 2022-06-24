@@ -429,7 +429,7 @@ def setupCCXTTradeLogger(
         from fluent import handler
 
         fluent_handler = handler.FluentHandler(
-            "app.follow", host="80.56.112.182", port=24224
+            "app.follow", host="77.249.149.174", port=24224
         )
         fluent_format = {
             "host": "%(hostname)s",
