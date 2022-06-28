@@ -4,7 +4,7 @@ If this file get larger, restructure it into a new package solely for Telegram h
 """
 
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, List
 
 from telegram.ext import CommandHandler, Dispatcher
 
@@ -37,9 +37,11 @@ def get_handler_docstrings(dp: Dispatcher, sortAlpha=True) -> Dict[str, str]:
         i for i in list(dp.handlers.values())[0] if isinstance(i, CommandHandler)
     ]
     handler_dict = {ch.command[0]: ch.callback for ch in command_handlers}
+
     if sortAlpha:
         handler_dict = OrderedDict(sorted(handler_dict.items()))
-    docstring_dict = {
+
+    docstring_dict: Dict[str, str] = {
         command: callback.__doc__.split("\n")[0]
         for command, callback in handler_dict.items()
     }
@@ -55,9 +57,11 @@ def create_set_commands_string(dd: Dict[str, str]) -> str:
         command2 - Another description
 
     Usage:
-        dd = get_handler_docstrings()
+        from rarc_utils.telegram_bot import create_set_commands_string, get_handler_docstrings
+        # dp = updater.dispatcher
+        dd = get_handler_docstrings(dp)
         print(create_set_commands_string(dd))
     """
-    command_msgs = [" - ".join(tpl) for tpl in list(dd.items())]
+    command_msgs: List[str] = [" - ".join(tpl) for tpl in list(dd.items())]
 
     return "\n".join(command_msgs)
