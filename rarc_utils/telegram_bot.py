@@ -3,10 +3,13 @@
 If this file get larger, restructure it into a new package solely for Telegram helper methods
 """
 
+import logging
 from collections import OrderedDict
-from typing import Dict, List
+from typing import Any, Dict, List, Sequence
 
 from telegram.ext import CommandHandler, Dispatcher
+
+logger = logging.getLogger(__name__)
 
 
 def toEscapeMsg(msg: str) -> str:
@@ -65,3 +68,26 @@ def create_set_commands_string(dd: Dict[str, str]) -> str:
     command_msgs: List[str] = [" - ".join(tpl) for tpl in list(dd.items())]
 
     return "\n".join(command_msgs)
+
+
+def delete_messages(dp: Dispatcher, messages: Sequence[Dict[str, Any]]) -> int:
+    """Delete messages, return number of succesful deletions."""
+    ret = [
+        dp.bot.delete_message(
+            chat_id=message["chat_id"], message_id=message["message_id"]
+        )
+        for message in messages
+    ]
+
+    return sum(ret)
+
+
+def delete_conv_msgs(dp: Dispatcher, key="conversation_messages") -> None:
+    """Delete conversations messages that are still visible due to bot restart / crash."""
+    for user_id, user_data in dp.persistence.user_data.items():
+        messages = user_data.get(key, {})
+        res = delete_messages(dp, messages.values())
+        logger.info(f"deleted {res:,} messages for {user_id=}")
+
+        # reset msgs
+        user_data[key] = {}
