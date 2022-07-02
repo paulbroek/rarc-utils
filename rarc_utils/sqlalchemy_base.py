@@ -273,7 +273,7 @@ async def create_many(
     }
     newItems = list(itemsDict.values())
 
-    logger.info(f"{model.__tablename__}s to add: {len(newItems)}")
+    logger.info(f"{model.__tablename__}s to add: {len(newItems):,}")
 
     if printCondition is not None and printCondition(model, newItems):
         # fmt_items = ', '.join([i.title for i in items.values()])

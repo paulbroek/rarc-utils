@@ -270,6 +270,15 @@ def dir__(not_starts=("__", "_")) -> Callable:
     return inner
 
 
+def map_list(l: list, d: dict, noNan=False) -> list:
+    """Map a dictionary over a list."""
+    res = list(map(d.get, l))
+    if noNan:
+        return [r for r in res if r is not None]
+
+    return res
+
+
 def mem_usage(prec=2, power=2) -> int:
     """Get memory usage of this process, and therefore this python session.
 

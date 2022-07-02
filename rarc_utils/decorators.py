@@ -13,7 +13,7 @@ from time import sleep, time, time_ns
 from typing import Callable, Tuple
 
 import pandas as pd
-from yapic import json
+from yapic import json  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
 
