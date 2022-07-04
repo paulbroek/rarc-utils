@@ -4,3 +4,4 @@ numpy
 pandas
 python-json-logger
 fastapi 
+coloredlogs

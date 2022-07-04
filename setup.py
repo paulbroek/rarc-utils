@@ -15,6 +15,7 @@ requires = [
     "PyYAML>=5.4.1",
     "python-json-logger>=2.0.2",
     "lz4>=4.0.1",
+    "coloredlogs>=15.0.1",
 ]
 
 setup(
