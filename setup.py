@@ -16,6 +16,7 @@ requires = [
     "python-json-logger>=2.0.2",
     "lz4>=4.0.1",
     "coloredlogs>=15.0.1",
+    "fastapi>=0.78.0",
 ]
 
 setup(
