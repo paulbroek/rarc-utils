@@ -5,15 +5,16 @@ e.g.: creating async or blocking sessions, creating all models, getting all str 
 
 import asyncio
 import logging
-# from abc import ABCMeta, abstractmethod
+import os
 from pprint import pprint
 from typing import Any, AsyncGenerator, Callable, Dict, Optional, Union
 
 from fastapi import HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession  # type: ignore[import]
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.future import select  # type: ignore[import]
 from sqlalchemy.orm import Session, sessionmaker
 
 from .misc import AttrDict
@@ -64,7 +65,8 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
         async with engine.begin() as conn:
             await conn.run_sync(
                 base.metadata.drop_all
-            )  # does not work with association tables.. --> use DROP DATABASE "enabler"; CREATE DATABASE "enabler"; for now
+            )  
+            # does not work with association tables.. --> use DROP DATABASE "enabler"; CREATE DATABASE "enabler"; for now
 
     async with engine.begin() as conn:
         await conn.run_sync(base.metadata.create_all)
@@ -72,10 +74,14 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
 
 def get_session(psql: AttrDict) -> sessionmaker:
     """Create normal (bocking) connection."""
+    # default config can be overriden by passing pg host env var
+    pghost = os.environ.get("POSTGRES_HOST", psql.host)
+    # read https://docs.sqlalchemy.org/en/14/core/engines.html#configuring-logging
+    # `echo=True` shows duplicate log output
     engine = create_engine(
-        f"postgresql://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
-        echo=False,  # shows double log output
-        echo_pool=False,  # read https://docs.sqlalchemy.org/en/14/core/engines.html#configuring-logging
+        f"postgresql://{psql.user}:{psql.passwd}@{pghost}/{psql.db}",
+        echo=False,  
+        echo_pool=False,  
         future=True,
     )
 
@@ -91,8 +97,8 @@ def get_async_session(psql: AttrDict) -> sessionmaker:
     """Create async connection."""
     engine = create_async_engine(
         f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
-        echo=False,  # shows double log output
-        echo_pool=False,  # read https://docs.sqlalchemy.org/en/14/core/engines.html#configuring-logging
+        echo=False,
+        echo_pool=False,
         future=True,
     )
 
