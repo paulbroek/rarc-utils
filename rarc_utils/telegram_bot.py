@@ -1,6 +1,6 @@
 """Telegram_bot.py, utility methods for telegram bots.
 
-If this file get larger, restructure it into a new package solely for Telegram helper methods
+If this file gets larger, restructure it into a new package solely for Telegram helper methods
 """
 
 import logging
@@ -10,6 +10,10 @@ from typing import Any, Dict, List, Sequence
 from telegram.ext import CommandHandler, Dispatcher
 
 logger = logging.getLogger(__name__)
+
+
+class MissingDocstring(Exception):
+    pass
 
 
 def toEscapeMsg(msg: str) -> str:
@@ -44,6 +48,15 @@ def get_handler_docstrings(dp: Dispatcher, sortAlpha=True) -> Dict[str, str]:
     if sortAlpha:
         handler_dict = OrderedDict(sorted(handler_dict.items()))
 
+    missing_docstrings = [c for c, cb in handler_dict.items() if cb.__doc__ is None]
+    nmissing = len(missing_docstrings)
+
+    if nmissing > 0:
+        raise MissingDocstring(
+            f"docstrings missing for ({nmissing}): {missing_docstrings}"
+        )
+
+    # warn user if docstring is missing
     docstring_dict: Dict[str, str] = {
         command: callback.__doc__.split("\n")[0]
         for command, callback in handler_dict.items()
