@@ -136,6 +136,23 @@ def wait_for_lock(variable_name, every=1, max_=8):
     return decorator
 
 
+def items_per_sec(f):
+    """Display number of received items per second."""
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time()
+        result = f(*args, **kw)
+        elapsed = time() - ts
+        nitem = len(result)
+        item_per_sec = nitem / elapsed
+        ITEMS = "item" if nitem == 1 else "items"
+        msg = f"got {nitem} {ITEMS} in {elapsed:.2f} seconds. ({item_per_sec:.2f} items/sec) "
+        print(msg)
+        return result
+
+    return wrap
+
+
 def timet(f):
     """Simpler decorator than timeit."""
     @wraps(f)
