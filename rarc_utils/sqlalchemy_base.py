@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession  # type: ignore[import]
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import select  # type: ignore[import]
 from sqlalchemy.orm import Session, sessionmaker
+from tqdm import tqdm
 
 from .misc import AttrDict
 
@@ -267,16 +268,19 @@ async def create_many(
     printCondition  print all items when this condition is met
     """
     assert isinstance(items, dict)
-    # first check if character names exist
+    # first check if names exist
     # todo: do not query for all names!
+    # query for model.nameAttr.isin(items.keys())
     existingNames = await session.execute(select(getattr(model, nameAttr)))
     namesSet = set(items.keys())
     names = list(namesSet - set(existingNames.scalars()))
+    # todo: very slow for large lists
     itemsDict = {
         name: create_instance(model, item)
-        for name, item in items.items()
+        for name, item in tqdm(items.items())
         if name in names
     }
+
     newItems = list(itemsDict.values())
 
     logger.info(f"{model.__tablename__}s to add: {len(newItems):,}")
@@ -310,7 +314,8 @@ async def create_many(
 
                 await session.commit()
         else:
-            session.add_all(newItems)
+            # session.add_all(newItems)
+            session.bulk_save_objects(newItems)
             await session.commit()
 
     # return all existing items for items.keys() ids
