@@ -273,7 +273,7 @@ async def create_many(
     # query for model.nameAttr.isin(items.keys())
     existingNames = await session.execute(select(getattr(model, nameAttr)))
     namesSet = set(items.keys())
-    names = list(namesSet - set(existingNames.scalars()))
+    names = namesSet - set(existingNames.scalars())
     # todo: very slow for large lists
     itemsDict = {
         name: create_instance(model, item)
