@@ -137,17 +137,25 @@ def wait_for_lock(variable_name, every=1, max_=8):
 
 
 def items_per_sec(f):
-    """Display number of received items per second."""
+    """Display number of received/saved items per second.
+    
+    Applies to returning value first, if missing, it uses the first argument
+    """
     @wraps(f)
     def wrap(*args, **kw):
         ts = time()
         result = f(*args, **kw)
+        how = "got"
+        if result is None:
+            result = args[0]
+            how = "saved"
+
         elapsed = time() - ts
         nitem = len(result)
-        item_per_sec = nitem / elapsed
+        item_per_sec = int(nitem / elapsed)
         ITEMS = "item" if nitem == 1 else "items"
-        msg = f"got {nitem} {ITEMS} in {elapsed:.2f} seconds. ({item_per_sec:.2f} items/sec) "
-        print(msg)
+        msg = f"{how} {nitem:,} {ITEMS} in {elapsed:.2f} seconds. ({item_per_sec:,} items/sec) `{f.__name__}`"
+        logger.info(msg)
         return result
 
     return wrap
