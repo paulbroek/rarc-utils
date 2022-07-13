@@ -9,6 +9,7 @@ import os
 from pprint import pprint
 from typing import Any, AsyncGenerator, Callable, Dict, Optional, Union
 
+import numpy as np
 from fastapi import HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession  # type: ignore[import]
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import select  # type: ignore[import]
 from sqlalchemy.orm import Session, sessionmaker
-from tqdm import tqdm
+from tqdm import tqdm  # type: ignore[import]
 
 from .misc import AttrDict
 
@@ -32,7 +33,7 @@ class UtilityBase:
 
     def json(self) -> dict:
         """Alias for `as_dict`."""
-        return self.as_dict()   
+        return self.as_dict()
 
     def as_big_dict(self) -> Dict[str, Any]:
         """Format model as dictionary, including methods."""
@@ -64,9 +65,7 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
                 return
 
         async with engine.begin() as conn:
-            await conn.run_sync(
-                base.metadata.drop_all
-            )  
+            await conn.run_sync(base.metadata.drop_all)
             # does not work with association tables.. --> use DROP DATABASE "enabler"; CREATE DATABASE "enabler"; for now
 
     async with engine.begin() as conn:
@@ -81,8 +80,8 @@ def get_session(psql: AttrDict) -> sessionmaker:
     # `echo=True` shows duplicate log output
     engine = create_engine(
         f"postgresql://{psql.user}:{psql.passwd}@{pghost}/{psql.db}",
-        echo=False,  
-        echo_pool=False,  
+        echo=False,
+        echo_pool=False,
         future=True,
     )
 
@@ -260,25 +259,32 @@ async def create_many(
     nameAttr="name",
     debug=False,
     many=True,
+    nbulk=1, 
+    autobulk=False,
     returnExisting=False,
     printCondition=None,
+    pushOneByOne=True,
 ) -> Dict[str, Any]:
     """Create many instances of a model.
 
     printCondition  print all items when this condition is met
+    autobulk        add items in bulk to db, but determine automatically
+                    how many bulk inserts to apply
     """
     assert isinstance(items, dict)
     # first check if names exist
-    # todo: do not query for all names!
-    # query for model.nameAttr.isin(items.keys())
-    existingNames = await session.execute(select(getattr(model, nameAttr)))
+    selAttr = getattr(model, nameAttr)
     namesSet = set(items.keys())
-    names = namesSet - set(existingNames.scalars())
-    # todo: very slow for large lists
+    # nope, cannot be used for more than 32K arguments
+    # existingNames = await session.execute(select(selAttr).filter(selAttr.in_(namesSet)))
+    existingNames = await session.execute(select(selAttr))
+    newNames = namesSet - set(existingNames.scalars())
+    # logger.info(f"{len(newNames)=:,}")
+    # todo: slow for large lists?
     itemsDict = {
         name: create_instance(model, item)
         for name, item in tqdm(items.items())
-        if name in names
+        if name in newNames
     }
 
     newItems = list(itemsDict.values())
@@ -295,6 +301,19 @@ async def create_many(
 
     # print(f"{dir(session)=}")
     # print(f"{help(session.add_all)=}")
+
+    # if pushOneByOne:
+    #     for item in newItems:
+    #         try:
+    #             await session.add(item)
+    #         except Exception as e:
+    #             logger.warning(f"{e=!r}")
+    #             logger.warning(f"{item.as_dict()=}")
+    #             logger.warning(f"{item=}")
+                
+    #         await session.commit()
+
+    #     return itemsDict
 
     # session.add(c)
     if len(newItems) > 0:
@@ -314,9 +333,20 @@ async def create_many(
 
                 await session.commit()
         else:
-            # session.add_all(newItems)
-            session.bulk_save_objects(newItems)
-            await session.commit()
+
+            # use bulks of at least 20K items, and max 20 bulks
+            bulksize = 20_000
+            maxbulk = 20
+            if autobulk and len(newItems) > bulksize:
+                nbulk = int(len(newItems) / bulksize)
+                nbulk = min(nbulk, maxbulk)
+
+            logger.info(f"{nbulk=}")
+            for chunk in tqdm(np.array_split(newItems, nbulk)):
+
+                session.add_all(list(chunk))
+                # session.bulk_save_objects(newItems) # not available for async sessions
+                await session.commit()
 
     # return all existing items for items.keys() ids
     if returnExisting:
@@ -324,6 +354,7 @@ async def create_many(
         # logger.info(f"{attr=}")
 
         reqNames = list(items.keys())
+        # cannot be used for more than 32K arguments
         query = select(model).where(attr.in_(reqNames))
         res = await session.execute(query)
 
