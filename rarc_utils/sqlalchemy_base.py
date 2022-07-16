@@ -264,6 +264,7 @@ async def create_many(
     returnExisting=False,
     printCondition=None,
     pushOneByOne=True,
+    tqdmFrom=1_000,
 ) -> Dict[str, Any]:
     """Create many instances of a model.
 
@@ -281,9 +282,10 @@ async def create_many(
     newNames = namesSet - set(existingNames.scalars())
     # logger.info(f"{len(newNames)=:,}")
     # todo: slow for large lists?
+    disable = len(items) < tqdmFrom
     itemsDict = {
         name: create_instance(model, item)
-        for name, item in tqdm(items.items())
+        for name, item in tqdm(items.items(), disable=disable)
         if name in newNames
     }
 
@@ -299,23 +301,6 @@ async def create_many(
     if debug:
         logger.info(f"{newItems[:3]=}")
 
-    # print(f"{dir(session)=}")
-    # print(f"{help(session.add_all)=}")
-
-    # if pushOneByOne:
-    #     for item in newItems:
-    #         try:
-    #             await session.add(item)
-    #         except Exception as e:
-    #             logger.warning(f"{e=!r}")
-    #             logger.warning(f"{item.as_dict()=}")
-    #             logger.warning(f"{item=}")
-                
-    #         await session.commit()
-
-    #     return itemsDict
-
-    # session.add(c)
     if len(newItems) > 0:
         if not many:
             for item in items:
@@ -341,8 +326,9 @@ async def create_many(
                 nbulk = int(len(newItems) / bulksize)
                 nbulk = min(nbulk, maxbulk)
 
-            logger.info(f"{nbulk=}")
-            for chunk in tqdm(np.array_split(newItems, nbulk)):
+            logger.debug(f"{nbulk=}")
+            disable = len(newItems) < bulksize
+            for chunk in tqdm(np.array_split(newItems, nbulk), disable=disable):
 
                 session.add_all(list(chunk))
                 # session.bulk_save_objects(newItems) # not available for async sessions
