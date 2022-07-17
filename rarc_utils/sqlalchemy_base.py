@@ -7,16 +7,18 @@ import asyncio
 import logging
 import os
 from pprint import pprint
-from typing import Any, AsyncGenerator, Callable, Dict, Optional, Union
+from typing import (Any, AsyncGenerator, Callable, Dict, List, Optional, Set,
+                    Tuple, Union)
 
 import numpy as np
 from fastapi import HTTPException
 from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession  # type: ignore[import]
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import select  # type: ignore[import]
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 from tqdm import tqdm  # type: ignore[import]
 
 from .misc import AttrDict
@@ -72,7 +74,7 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
         await conn.run_sync(base.metadata.create_all)
 
 
-def get_session(psql: AttrDict) -> sessionmaker:
+def get_session(psql: AttrDict, pool_size=20) -> sessionmaker:
     """Create normal (bocking) connection."""
     # default config can be overriden by passing pg host env var
     pghost = os.environ.get("POSTGRES_HOST", psql.host)
@@ -83,6 +85,7 @@ def get_session(psql: AttrDict) -> sessionmaker:
         echo=False,
         echo_pool=False,
         future=True,
+        pool_size=pool_size,
     )
 
     session = sessionmaker(
@@ -93,13 +96,14 @@ def get_session(psql: AttrDict) -> sessionmaker:
     return session
 
 
-def get_async_session(psql: AttrDict) -> sessionmaker:
+def get_async_session(psql: AttrDict, pool_size=20) -> sessionmaker:
     """Create async connection."""
     engine = create_async_engine(
         f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
         echo=False,
         echo_pool=False,
         future=True,
+        pool_size=pool_size,
     )
 
     async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
@@ -196,6 +200,57 @@ def get_or_create(session: Session, model, item=None, filter_by=None, **kwargs):
     return instance
 
 
+def get_one_or_create(
+    session, model, create_method="", create_method_kwargs=None, **kwargs
+):
+    """Safer version of get_or_create.
+
+    Does not commit, user should do this after the transaction.
+    From:
+        https://stackoverflow.com/questions/2546207/does-sqlalchemy-have-an-equivalent-of-djangos-get-or-create
+    """
+    try:
+        return session.query(model).filter_by(**kwargs).one(), False
+    except NoResultFound:
+        kwargs.update(create_method_kwargs or {})
+        created = getattr(model, create_method, model)(**kwargs)
+        try:
+            session.add(created)
+            session.flush()
+            return created, True
+        except IntegrityError:
+            session.rollback()
+            return session.query(model).filter_by(**kwargs).one(), False
+
+
+async def aget_one_or_create(
+    session, model, create_method="", create_method_kwargs=None, **kwargs
+) -> Tuple[Any, bool]:
+    """Async version of get_one_or_create.
+
+    Does not commit, user should do this after the transaction.
+    From:
+        https://stackoverflow.com/questions/2546207/does-sqlalchemy-have-an-equivalent-of-djangos-get-or-create
+    """
+    try:
+        q = select(model).filter_by(**kwargs)
+        res = await session.execute(q)
+        # logger.warning(f"{dir(res.scalars())=}")
+        return res.scalars().first(), False
+    except NoResultFound:
+        kwargs.update(create_method_kwargs or {})
+        created = getattr(model, create_method, model)(**kwargs)
+        try:
+            await session.add(created)
+            await session.flush()
+            return created, True
+        except IntegrityError:
+            await session.rollback()
+            q = select(model).filter_by(**kwargs)
+            res = await session.execute(q)
+            return q.scalars().first(), False
+
+
 async def aget(
     session: AsyncSession, model, filter_by: Optional[dict] = None
 ) -> Optional["model"]:
@@ -252,6 +307,36 @@ def create_instance(model, item: Union[dict, Any]):
         raise
 
 
+async def new_names(
+    session: AsyncSession, model, items: Dict[Union[str, int], dict], nameAttr="name"
+) -> Set[Union[str, int]]:
+    """Return names that are missing for model."""
+    selAttr = getattr(model, nameAttr)
+    namesSet = set(items.keys())
+    # nope, cannot be used for more than 32K arguments
+    # existingNames = await session.execute(select(selAttr).filter(selAttr.in_(namesSet)))
+    existingNames = await session.execute(select(selAttr))
+    newNames = namesSet - set(existingNames.scalars())
+
+    return newNames
+
+
+async def add_many(
+    session: AsyncSession,
+    model,
+    items: Dict[Union[str, int], dict],
+    nameAttr,
+) -> Dict[str, Any]:
+
+    # ugly: asyncio cannot handle so many coroutines
+    cors = (aget_one_or_create(session, model, **item) for item in items.values())
+
+    res: List[Tuple[Any, bool]] = await asyncio.gather(*cors)
+    instances = [i[0] for i in res]
+
+    return {getattr(item, nameAttr): item for item in instances if item is not None}
+
+
 async def create_many(
     session: AsyncSession,
     model,
@@ -259,35 +344,33 @@ async def create_many(
     nameAttr="name",
     debug=False,
     many=True,
-    nbulk=1, 
+    nbulk=1,
     autobulk=False,
     returnExisting=False,
+    mergeExisting=False,
     printCondition=None,
-    pushOneByOne=True,
     tqdmFrom=1_000,
+    commit=True,
 ) -> Dict[str, Any]:
     """Create many instances of a model.
 
     printCondition  print all items when this condition is met
     autobulk        add items in bulk to db, but determine automatically
                     how many bulk inserts to apply
+    mergeExisting   safer than returnExisting, it fetches existing items singly, and 
+                    returns it together with newly created instances
     """
     assert isinstance(items, dict)
     # first check if names exist
-    selAttr = getattr(model, nameAttr)
-    namesSet = set(items.keys())
-    # nope, cannot be used for more than 32K arguments
-    # existingNames = await session.execute(select(selAttr).filter(selAttr.in_(namesSet)))
-    existingNames = await session.execute(select(selAttr))
-    newNames = namesSet - set(existingNames.scalars())
+    newNames = await new_names(session, model, items, nameAttr=nameAttr)
     # logger.info(f"{len(newNames)=:,}")
-    # todo: slow for large lists?
     disable = len(items) < tqdmFrom
     itemsDict = {
         name: create_instance(model, item)
         for name, item in tqdm(items.items(), disable=disable)
         if name in newNames
     }
+    existingItems = {name: i for name, i in items.items() if name not in newNames}
 
     newItems = list(itemsDict.values())
 
@@ -316,9 +399,10 @@ async def create_many(
                     logger.warning(f"cannot add {item=}. {str(e)=}")
                     raise
 
-                await session.commit()
-        else:
+                if commit:
+                    await session.commit()
 
+        else:
             # use bulks of at least 20K items, and max 20 bulks
             bulksize = 20_000
             maxbulk = 20
@@ -332,7 +416,8 @@ async def create_many(
 
                 session.add_all(list(chunk))
                 # session.bulk_save_objects(newItems) # not available for async sessions
-                await session.commit()
+                if commit:
+                    await session.commit()
 
     # return all existing items for items.keys() ids
     if returnExisting:
@@ -348,5 +433,10 @@ async def create_many(
 
         # return a dict
         itemsDict = {getattr(i, nameAttr): i for i in instances}
+
+    elif mergeExisting:
+        existingItemsDict = await add_many(session, model, existingItems, nameAttr=nameAttr)
+
+        itemsDict = {**itemsDict, **existingItemsDict}
 
     return itemsDict
