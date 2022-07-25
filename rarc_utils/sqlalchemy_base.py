@@ -349,7 +349,7 @@ async def create_many(
     returnExisting=False,
     mergeExisting=False,
     printCondition=None,
-    tqdmFrom=1_000,
+    tqdmFrom=5_000,
     commit=True,
 ) -> Dict[str, Any]:
     """Create many instances of a model.
