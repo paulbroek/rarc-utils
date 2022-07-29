@@ -4,7 +4,9 @@ e.g.: creating async or blocking sessions, creating all models, getting all str 
 """
 
 import asyncio
+import inspect
 import logging
+import math
 import os
 from pprint import pprint
 from typing import (Any, AsyncGenerator, Callable, Dict, List, Optional, Set,
@@ -13,6 +15,8 @@ from typing import (Any, AsyncGenerator, Callable, Dict, List, Optional, Set,
 import numpy as np
 from fastapi import HTTPException
 from sqlalchemy import create_engine
+from sqlalchemy import inspect as inspect_sqlalchemy
+# from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession  # type: ignore[import]
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -357,7 +361,7 @@ async def create_many(
     printCondition  print all items when this condition is met
     autobulk        add items in bulk to db, but determine automatically
                     how many bulk inserts to apply
-    mergeExisting   safer than returnExisting, it fetches existing items singly, and 
+    mergeExisting   safer than returnExisting, it fetches existing items singly, and
                     returns it together with newly created instances
     """
     assert isinstance(items, dict)
@@ -435,8 +439,171 @@ async def create_many(
         itemsDict = {getattr(i, nameAttr): i for i in instances}
 
     elif mergeExisting:
-        existingItemsDict = await add_many(session, model, existingItems, nameAttr=nameAttr)
+        existingItemsDict = await add_many(
+            session, model, existingItems, nameAttr=nameAttr
+        )
 
         itemsDict = {**itemsDict, **existingItemsDict}
 
     return itemsDict
+
+
+def did_change(item_existing, item_new, key: str) -> bool:
+    """Check if `key` changed `item_new`."""
+    # raise NotImplementedError
+
+    if item_new is None:
+        return False
+
+    if (
+        key in dir(item_existing)
+        and key in dir(item_new)
+        and getattr(item_new, key) != getattr(item_existing, key)
+    ):
+        return True
+
+    return False
+
+
+def did_increase(item_existing, item_new, key: str) -> bool:
+    """Check if `key` increased in `item_new`."""
+    if item_new is None:
+        return False
+
+    if (
+        key in dir(item_existing)
+        and key in dir(item_new)
+        and (getattr(item_new, key) or 0) > (getattr(item_existing, key) or 0)
+    ):
+        return True
+
+    return False
+
+
+def did_increase_len(item_existing, item_new, key: str) -> bool:
+    """Check if len(item_new.key) increased in `item_new`."""
+    # no new item or a None attribute
+    if item_existing is None:
+        return False
+
+    # key does not exist, always update the item
+    # if getattr(item_existing, key) is None:
+    #     return True
+
+    if (
+        key in dir(item_existing)
+        and key in dir(item_new)
+        and len(getattr(item_new, key) or []) > len(getattr(item_existing, key) or [])
+    ):
+        return True
+
+    return False
+
+
+def upsert_many(
+    session,
+    model,
+    items: Dict[Union[str, int], dict],
+    nameAttr="name",
+    bulksize=20_000,
+    updateCondition: Optional[Callable] = None,
+    debug=False
+):
+    """Upsert many instances of a model.
+
+    Also increments instance.nupdate, if present
+
+    Multiple options:
+        - use stmt.on_conflit_do_update
+        - OR fetch all objects first (if dataset not too large), and only update when a field is >= ,
+            this means that you always update with newer data
+    """
+    # stmt = insert(model).values(user_email='a@b.com', data='inserted data')
+    # stmt = stmt.on_conflict_do_update(
+    #     index_elements=[my_table.c.user_email],
+    #     index_where=my_table.c.user_email.like('%@gmail.com'),
+    #     set_=dict(data=stmt.excluded.data)
+    # )
+    # conn.execute(stmt)
+
+    list_items = list(items.items())
+    nbulk = math.ceil(len(items) / bulksize)
+
+    disable = len(items) < bulksize
+    instances = []
+    attr = getattr(model, nameAttr)
+    for chunk in tqdm(np.array_split(list_items, nbulk), disable=disable):
+        reqNames = [c[0] for c in chunk]
+        query = select(model).where(attr.in_(reqNames))
+        instances += session.execute(query).scalars().fetchall()
+
+        # logger.info(f"{inspect_sqlalchemy(instances[0]).session=}")
+
+    instances_dict = {getattr(i, nameAttr): i for i in instances}
+    # calculate number of items to be updates
+    new_keys = items.keys() - set(getattr(i, nameAttr) for i in instances)
+    # nnew = len(items) - len(instances)
+    nnew = len(new_keys)
+
+    existing_to_new: Dict[Union[str, int], Tuple[dict, dict]] = {
+        k: (instances_dict.get(k, None), i) for k, i in items.items()
+    }
+
+    if updateCondition is not None:
+        assert callable(updateCondition)
+        assert ( narg := len(inspect.signature(updateCondition).parameters) ) <= 3, f"{narg=} > 3, did you forget to pass a partial function?"
+        toupdate = [
+            item_new
+            for k, (item_existing, item_new) in existing_to_new.items()
+            if updateCondition(item_existing, item_new)
+        ]
+    else:
+        toupdate = instances
+
+    if debug:
+        raise Exception("debugging")
+
+    ntoupdate = len(toupdate)
+
+    logger.info(f"{nnew=:,} {ntoupdate=:,}")
+
+    toupdate_keys = set(getattr(i, nameAttr) for i in toupdate)
+    disable = len(toupdate_keys) < 0.7 * bulksize
+    nupdated = 0
+    query = select(model).where(attr.in_(toupdate_keys))
+    for item in tqdm(session.execute(query).scalars().fetchall(), disable=disable):
+        item.nupdate += 1
+        new = existing_to_new[getattr(item, nameAttr)][-1]
+        _ = item.update_from_json(new.as_dict())
+        nupdated += 1
+
+    # for k, (existing, new) in tqdm(existing_to_new.items(), disable=disable):
+    #     if k not in toupdate_keys:
+    #         continue
+    #     # increase nupdate before updating
+    #     if 'nupdate' in dir(new):
+    #         existing.nupdate += 1
+
+    #     # todoupdate items based on dict of new item
+    #     # fetch items again?
+    #     existing.update_from_json(new.as_dict())
+    #     nupdated += 1
+
+    # logger.info(f"{inspect_sqlalchemy(existing).session=}")
+        
+    if nupdated > 0:
+        logger.info(f"updating {nupdated=:,} items")
+
+    session.commit()
+
+    # todo: reset nupdate for failed attemps to max 1
+
+    # todo: make this method generic, remove Book related stuff
+
+    # add new items
+    if nnew > 0:
+        logger.info(f"adding {nnew:,} items")
+        session.add_all([v for i,v in items.items() if i in new_keys])
+        session.commit()
+
+    return toupdate_keys, existing_to_new
