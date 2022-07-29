@@ -15,7 +15,7 @@ from typing import (Any, AsyncGenerator, Callable, Dict, List, Optional, Set,
 import numpy as np
 from fastapi import HTTPException
 from sqlalchemy import create_engine
-from sqlalchemy import inspect as inspect_sqlalchemy
+# from sqlalchemy import inspect as inspect_sqlalchemy
 # from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession  # type: ignore[import]
@@ -542,7 +542,6 @@ def upsert_many(
     instances_dict = {getattr(i, nameAttr): i for i in instances}
     # calculate number of items to be updates
     new_keys = items.keys() - set(getattr(i, nameAttr) for i in instances)
-    # nnew = len(items) - len(instances)
     nnew = len(new_keys)
 
     existing_to_new: Dict[Union[str, int], Tuple[dict, dict]] = {
@@ -570,11 +569,14 @@ def upsert_many(
     toupdate_keys = set(getattr(i, nameAttr) for i in toupdate)
     disable = len(toupdate_keys) < 0.7 * bulksize
     nupdated = 0
+    nfield_updated = 0
     query = select(model).where(attr.in_(toupdate_keys))
-    for item in tqdm(session.execute(query).scalars().fetchall(), disable=disable):
-        item.nupdate += 1
-        new = existing_to_new[getattr(item, nameAttr)][-1]
-        _ = item.update_from_json(new.as_dict())
+    # for item in tqdm(session.execute(query).scalars().fetchall(), disable=disable):
+    for key in tqdm(toupdate_keys, disable=disable):
+        existing, new = existing_to_new[key]
+        existing.nupdate += 1
+        new = existing_to_new[key][-1]
+        nfield_updated += existing.update_from_json(new.as_dict())
         nupdated += 1
 
     # for k, (existing, new) in tqdm(existing_to_new.items(), disable=disable):
@@ -590,20 +592,19 @@ def upsert_many(
     #     nupdated += 1
 
     # logger.info(f"{inspect_sqlalchemy(existing).session=}")
-        
+
     if nupdated > 0:
-        logger.info(f"updating {nupdated=:,} items")
+        logger.info(f"updating {nupdated=:,} items ({nfield_updated=:,})")
 
     session.commit()
 
     # todo: reset nupdate for failed attemps to max 1
-
-    # todo: make this method generic, remove Book related stuff
+    #
 
     # add new items
     if nnew > 0:
         logger.info(f"adding {nnew:,} items")
-        session.add_all([v for i,v in items.items() if i in new_keys])
+        session.add_all([v for i, v in items.items() if i in new_keys])
         session.commit()
 
     return toupdate_keys, existing_to_new

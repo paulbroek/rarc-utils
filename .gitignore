@@ -12,6 +12,7 @@ __pycache__/
 
 # vim config files
 *.vim
+*.swp
 
 # Distribution / packaging
 .Python
