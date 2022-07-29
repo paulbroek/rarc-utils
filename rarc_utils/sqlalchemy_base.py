@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession  # type: ignore[import]
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import select  # type: ignore[import]
+from sqlalchemy.future.engine import Engine  # type: ignore[import]
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from tqdm import tqdm  # type: ignore[import]
@@ -78,19 +79,36 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
         await conn.run_sync(base.metadata.create_all)
 
 
-def get_session(psql: AttrDict, pool_size=20) -> sessionmaker:
-    """Create normal (bocking) connection."""
-    # default config can be overriden by passing pg host env var
+def fmt_connection_url(psql: AttrDict, async_=False) -> str:
+    """Format connection url."""
     pghost = os.environ.get("POSTGRES_HOST", psql.host)
+    pfx = "postgresql"
+    if async_:
+        pfx += "+asyncpg"
+
+    return f"{pfx}://{psql.user}:{psql.passwd}@{pghost}/{psql.db}"
+
+
+def get_engine(psql: AttrDict, pool_size=20) -> Engine:
+    """Create engine."""
+    # default config can be overriden by passing pg host env var
+
     # read https://docs.sqlalchemy.org/en/14/core/engines.html#configuring-logging
     # `echo=True` shows duplicate log output
     engine = create_engine(
-        f"postgresql://{psql.user}:{psql.passwd}@{pghost}/{psql.db}",
+        fmt_connection_url(psql),
         echo=False,
         echo_pool=False,
         future=True,
         pool_size=pool_size,
     )
+
+    return engine
+
+
+def get_session(psql: AttrDict, pool_size=20) -> sessionmaker:
+    """Create normal (bocking) connection."""
+    engine = get_engine(psql, pool_size=pool_size)
 
     session = sessionmaker(
         engine,
@@ -103,7 +121,7 @@ def get_session(psql: AttrDict, pool_size=20) -> sessionmaker:
 def get_async_session(psql: AttrDict, pool_size=20) -> sessionmaker:
     """Create async connection."""
     engine = create_async_engine(
-        f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
+        fmt_connection_url(psql, async_=True),
         echo=False,
         echo_pool=False,
         future=True,
@@ -507,7 +525,7 @@ def upsert_many(
     nameAttr="name",
     bulksize=20_000,
     updateCondition: Optional[Callable] = None,
-    debug=False
+    debug=False,
 ):
     """Upsert many instances of a model.
 
@@ -550,7 +568,9 @@ def upsert_many(
 
     if updateCondition is not None:
         assert callable(updateCondition)
-        assert ( narg := len(inspect.signature(updateCondition).parameters) ) <= 3, f"{narg=} > 3, did you forget to pass a partial function?"
+        assert (
+            narg := len(inspect.signature(updateCondition).parameters)
+        ) <= 3, f"{narg=} > 3, did you forget to pass a partial function?"
         toupdate = [
             item_new
             for k, (item_existing, item_new) in existing_to_new.items()
