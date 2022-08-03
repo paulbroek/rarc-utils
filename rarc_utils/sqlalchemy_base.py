@@ -4,10 +4,12 @@ e.g.: creating async or blocking sessions, creating all models, getting all str 
 """
 
 import asyncio
+import configparser
 import inspect
 import logging
 import math
 import os
+from pathlib import Path
 from pprint import pprint
 from typing import (Any, AsyncGenerator, Callable, Dict, List, Optional, Set,
                     Tuple, Union)
@@ -31,13 +33,14 @@ from .misc import AttrDict
 logger = logging.getLogger(__name__)
 
 
-def load_config(db_name=None, cfg_file=None):
+def load_config(db_name=None, cfg_file=None, config_dir=None):
     """Load config.
 
     ugly way of retrieving postgres cfg file
     """
     assert db_name is not None
     assert cfg_file is not None
+    assert config_dir is not None
     p = Path(config_dir.__file__)
     cfgFile = p.with_name(cfg_file)
 
