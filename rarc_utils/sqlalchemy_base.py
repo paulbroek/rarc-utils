@@ -31,6 +31,25 @@ from .misc import AttrDict
 logger = logging.getLogger(__name__)
 
 
+def load_config(db_name=None, cfg_file=None):
+    """Load config.
+
+    ugly way of retrieving postgres cfg file
+    """
+    assert db_name is not None
+    assert cfg_file is not None
+    p = Path(config_dir.__file__)
+    cfgFile = p.with_name(cfg_file)
+
+    parser = configparser.ConfigParser()
+    parser.read(cfgFile)
+    assert "psql" in parser, f"'psql' not in {cfgFile=}"
+    psql = AttrDict(parser["psql"])
+    assert psql["db"] == db_name  # do not overwrite existing other db
+
+    return psql
+
+
 class UtilityBase:
     """Adds helper methods to SQLAlchemy `Base` class."""
 
