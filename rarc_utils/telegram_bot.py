@@ -85,12 +85,16 @@ def create_set_commands_string(dd: Dict[str, str]) -> str:
 
 def delete_messages(dp: Dispatcher, messages: Sequence[Dict[str, Any]]) -> int:
     """Delete messages, return number of succesful deletions."""
-    ret = [
-        dp.bot.delete_message(
-            chat_id=message["chat_id"], message_id=message["message_id"]
-        )
-        for message in messages
-    ]
+    ret = []
+
+    for message in messages:
+        try:
+            res = dp.bot.delete_message(
+                chat_id=message["chat_id"], message_id=message["message_id"]
+            )
+            ret.append(res)
+        except Exception as e:
+            logger.error(f"cannot delete message. {e=!r}")
 
     return sum(ret)
 
