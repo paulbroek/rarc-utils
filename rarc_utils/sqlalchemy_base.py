@@ -33,7 +33,7 @@ from .misc import AttrDict
 logger = logging.getLogger(__name__)
 
 
-def load_config(db_name=None, cfg_file=None, config_dir=None):
+def load_config(db_name=None, cfg_file=None, config_dir=None, starts_with=False):
     """Load config.
 
     ugly way of retrieving postgres cfg file
@@ -48,7 +48,12 @@ def load_config(db_name=None, cfg_file=None, config_dir=None):
     parser.read(cfgFile)
     assert "psql" in parser, f"'psql' not in {cfgFile=}"
     psql = AttrDict(parser["psql"])
-    assert psql["db"] == db_name  # do not overwrite existing other db
+
+    # do not overwrite existing other db
+    if starts_with:
+        assert psql["db"].startswith(db_name)
+    else:
+        assert psql["db"] == db_name
 
     return psql
 
@@ -80,6 +85,7 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
         echo=True,
     )
 
+    print(f"{psql.db=} {psql.host=}")
     # TO-DO: make sure to check for a backup file first, as it deletes all psql data
     if dropFirst:
         if not force:
