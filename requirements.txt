@@ -5,3 +5,5 @@ pandas
 python-json-logger
 fastapi 
 coloredlogs
+asyncpg
+psycopg2
