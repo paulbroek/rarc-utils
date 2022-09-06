@@ -18,6 +18,8 @@ requires = [
     "lz4>=4.0.1",
     "coloredlogs>=15.0.1",
     "fastapi>=0.78.0",
+    "asyncpg",
+    "psycopg2",
 ]
 
 setup(
