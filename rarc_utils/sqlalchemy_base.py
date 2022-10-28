@@ -410,6 +410,7 @@ async def create_many(
     mergeExisting   safer than returnExisting, it fetches existing items singly, and
                     returns it together with newly created instances
     """
+    assert isinstance(session, AsyncSession)
     assert isinstance(items, dict)
     # first check if names exist
     newNames = await new_names(session, model, items, nameAttr=nameAttr)
