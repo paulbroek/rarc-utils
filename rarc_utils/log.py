@@ -485,3 +485,6 @@ def setupCCXTTradeLogger(
     # stream_handler.setFormatter(formatter)
 
     return logger
+
+
+LOG_FMT: str = "%(asctime)s - %(module)-16s - %(lineno)-4s - %(funcName)-20s - %(levelname)-7s - %(message)s"
