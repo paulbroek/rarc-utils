@@ -31,13 +31,13 @@ from sqlalchemy.orm import Session
 
 from rarc.config.redis import redis as rk
 import rarc.config.redis
-from rarc_utils.log import setup_logger, read_json_log_file, read_json_log_redis
+from rarc_utils.log import setup_logger, read_json_log_file, read_json_log_redis, LOG_FMT
 from rarc_utils.misc import AttrDict
 from rarc_utils.sqlalchemy_base import get_session
 
-log_fmt = "%(asctime)s - %(module)-16s - %(lineno)-4s - %(funcName)-16s - %(levelname)-7s - %(message)s"  # name
+# log_fmt = "%(asctime)s - %(module)-16s - %(lineno)-4s - %(funcName)-16s - %(levelname)-7s - %(message)s"  # name
 logger = setup_logger(
-    cmdLevel=logging.INFO, saveFile=0, savePandas=1, jsonLogger=0, color=1, fmt=log_fmt
+    cmdLevel=logging.INFO, saveFile=0, savePandas=1, jsonLogger=0, color=1, fmt=LOG_FMT
 )  # URGENT WARNING
 log_file = "json_lines.log"
 log_handler = logger.handlers[-1]  # last handler is colored logs console handler
