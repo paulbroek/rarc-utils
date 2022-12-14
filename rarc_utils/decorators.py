@@ -4,6 +4,7 @@ import asyncio
 import copy
 import inspect
 import logging
+import os
 import platform
 import traceback
 from collections import deque, namedtuple
@@ -43,6 +44,30 @@ def check_running(method):
         return result
 
     return check_run
+
+
+def check_file_exists(method):
+    """Check if file exists
+    
+    decorator
+    """
+
+    @wraps(method)
+    def check_exists(*args, **kw):
+
+        fileName = args[0]
+        if not os.path.exists(fileName):
+            msg = f"{fileName} does not exist"
+            logger.error(msg)
+            raise FileNotFoundError(msg)
+
+        # logger.info(f"call {method.__name__}")
+        result = method(*args, **kw)
+
+        return result
+
+    return check_exists
+
 
 
 def save_ncall(log_once_per_n=None):
