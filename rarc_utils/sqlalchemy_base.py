@@ -41,12 +41,18 @@ def load_config(db_name=None, cfg_file=None, config_dir=None, starts_with=False)
     assert db_name is not None
     assert cfg_file is not None
     assert config_dir is not None
-    p = Path(config_dir.__file__)
-    cfgFile = p.with_name(cfg_file)
+
+    # take from secrets dur if running in production: kubernetes
+    releaseMode = os.environ.get("RELEASE_MODE", "DEVELOPMENT")
+    cfgPath = (
+        Path(config_dir.__file__).with_name(cfg_file)
+        if releaseMode == "DEVELOPMENT"
+        else Path("/run/secrets") / cfg_file / "secret.file"
+    )
 
     parser = configparser.ConfigParser()
-    parser.read(cfgFile)
-    assert "psql" in parser, f"'psql' not in {cfgFile=}"
+    parser.read(cfgPath)
+    assert "psql" in parser, f"'psql' not in {cfgPath=}"
     psql = AttrDict(parser["psql"])
 
     # do not overwrite existing other db
