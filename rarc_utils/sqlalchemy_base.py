@@ -47,7 +47,8 @@ def load_config(db_name=None, cfg_file=None, config_dir=None, starts_with=False)
     cfgPath = (
         Path(config_dir.__file__).with_name(cfg_file)
         if releaseMode == "DEVELOPMENT"
-        else Path("/run/secrets") / cfg_file / "secret.file"
+        else Path("/run/secrets") / cfg_file
+        # else Path("/run/secrets") / cfg_file / "secret.file"
     )
 
     parser = configparser.ConfigParser()
