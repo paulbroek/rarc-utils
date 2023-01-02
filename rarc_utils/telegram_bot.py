@@ -5,9 +5,15 @@ If this file gets larger, restructure it into a new package solely for Telegram 
 
 import logging
 from collections import OrderedDict
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Sequence, TypeVar
 
-from telegram.ext import CommandHandler, Dispatcher
+from telegram.ext import CommandHandler
+
+# Dispatcher removed in bot v20?
+# from telegram.ext import Dispatcher
+Dispatcher = TypeVar("Dispatcher", bound=Any)
+
+
 
 logger = logging.getLogger(__name__)
 
