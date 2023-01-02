@@ -14,7 +14,6 @@ from telegram.ext import CommandHandler
 Dispatcher = TypeVar("Dispatcher", bound=Any)
 
 
-
 logger = logging.getLogger(__name__)
 
 
