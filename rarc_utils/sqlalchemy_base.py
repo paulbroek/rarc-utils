@@ -117,11 +117,12 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
 def fmt_connection_url(psql: AttrDict, async_=False) -> str:
     """Format connection url."""
     pghost = os.environ.get("POSTGRES_HOST", psql.host)
+    pgport = os.environ.get("POSTGRES_PORT", psql.port) or 5432
     pfx = "postgresql"
     if async_:
         pfx += "+asyncpg"
 
-    return f"{pfx}://{psql.user}:{psql.passwd}@{pghost}/{psql.db}"
+    return f"{pfx}://{psql.user}:{psql.passwd}@{pghost}:{pgport}/{psql.db}"
 
 
 def get_engine(psql: AttrDict, pool_size=20) -> Engine:
