@@ -87,8 +87,9 @@ class UtilityBase:
 
 async def async_main(psql, base, force=False, dropFirst=False) -> None:
     """Create async engine for sqlalchemy."""
+    port = getattr(psql, "port", 5432)
     engine = create_async_engine(
-        f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}/{psql.db}",
+        f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}:{port}/{psql.db}",
         echo=True,
     )
 
