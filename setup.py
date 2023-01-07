@@ -20,6 +20,7 @@ requires = [
     "fastapi>=0.78.0",
     "asyncpg",
     "psycopg2",
+    "requests",
 ]
 
 setup(
