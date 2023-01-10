@@ -311,6 +311,13 @@ def colab_auto_refresh():
     raise NotImplementedError
 
 
+def log_module_versions(modules: List[str]) -> None:
+    """Log module version for a list of modules."""
+    for mod in modules:
+        v = version(mod)
+        logger.info(f"{mod} version={v}")
+
+
 def check_version(package: str, lib, reqVersion=False, askUser=True):
     """Compare local version of a package with that listed on pypi.org. for ccxt lib it's crucial that you always update before running this bot."""
     # fetch latest PyPi version
