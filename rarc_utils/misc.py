@@ -311,10 +311,14 @@ def colab_auto_refresh():
     raise NotImplementedError
 
 
+def get_module_versions(modules: List[str]) -> Dict[str, str]:
+    """Get module versions for a list of module strings."""
+    return {mod: version(mod) for mod in modules}
+
+
 def log_module_versions(modules: List[str]) -> None:
-    """Log module version for a list of modules."""
-    for mod in modules:
-        v = version(mod)
+    """Log module version for a list of module strings."""
+    for mod, v in get_module_versions(modules).items():
         logger.info(f"{mod} version={v}")
 
 
