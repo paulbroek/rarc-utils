@@ -395,7 +395,7 @@ async def add_many(
 
     return {getattr(item, nameAttr): item for item in instances if item is not None}
 
-
+# TODO: rewrite and simplify
 async def create_many(
     session: AsyncSession,
     model,
