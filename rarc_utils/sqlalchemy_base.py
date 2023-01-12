@@ -15,7 +15,6 @@ from typing import (Any, AsyncGenerator, Callable, Dict, List, Optional, Set,
                     Tuple, Union)
 
 import numpy as np
-from fastapi import HTTPException
 from sqlalchemy import create_engine
 # from sqlalchemy import inspect as inspect_sqlalchemy
 # from sqlalchemy.dialects.postgresql import insert
@@ -27,6 +26,8 @@ from sqlalchemy.future.engine import Engine  # type: ignore[import]
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from tqdm import tqdm  # type: ignore[import]
+
+from fastapi import HTTPException
 
 from .misc import AttrDict
 
@@ -197,6 +198,31 @@ async def run_in_session(async_session, func, **kwargs):
     """Run in async session."""
     async with async_session() as session:
         return await func(session, **kwargs)
+
+
+def inject_str_attributes(parentInstance, itemDict, attrModel, session):
+    """Inject string attributes for a model instance.
+
+    Example:
+        book.genres = ['genre1', 'fiction', 'fantasy']
+        book = inject_str_attributes(book, Genre)
+        book.genres
+        # [Genre(name=genre1), Genre(name=fiction), Genre(name=fantasy)]
+    """
+    # assert hasattr(parentInstance, attrName)
+    assert set([c.name for c in attrModel.__table__.columns]) == set(
+        ["id", "name"]
+    ), "only works for attr models with columns `id` and `name`: str"
+    attrModelName = attrModel.__table__.name
+    attrName = attrModelName.lower() + "s"
+    for attr in itemDict.get(attrName, []):
+        attr = session.merge(attrModel(name=attr))
+        if hasattr(parentInstance, attrName):
+            setattr(parentInstance, attrName, [attr])
+        else:
+            getattr(parentInstance, attrName).append(attr)
+
+    return parentInstance
 
 
 async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
