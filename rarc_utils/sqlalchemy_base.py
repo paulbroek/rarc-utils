@@ -15,6 +15,7 @@ from typing import (Any, AsyncGenerator, Callable, Dict, List, Optional, Set,
                     Tuple, Union)
 
 import numpy as np
+from fastapi import HTTPException
 from sqlalchemy import create_engine
 # from sqlalchemy import inspect as inspect_sqlalchemy
 # from sqlalchemy.dialects.postgresql import insert
@@ -26,8 +27,6 @@ from sqlalchemy.future.engine import Engine  # type: ignore[import]
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from tqdm import tqdm  # type: ignore[import]
-
-from fastapi import HTTPException
 
 from .misc import AttrDict
 
@@ -94,7 +93,7 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
         echo=True,
     )
 
-    print(f"{psql.db=} {psql.host=}")
+    print(f"{psql.db=} {psql.host=} {psql.port=}")
     # TO-DO: make sure to check for a backup file first, as it deletes all psql data
     if dropFirst:
         if not force:
