@@ -28,41 +28,42 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from tqdm import tqdm  # type: ignore[import]
 
-from .misc import AttrDict
+# from .misc import AttrDict
+from .models.psql_config import psqlConfig
 
 logger = logging.getLogger(__name__)
 
 
-def load_config(db_name=None, cfg_file=None, config_dir=None, starts_with=False):
-    """Load config.
+# def load_config(db_name=None, cfg_file=None, config_dir=None, starts_with=False):
+#     """Load config.
 
-    ugly way of retrieving postgres cfg file
-    """
-    assert db_name is not None
-    assert cfg_file is not None
-    assert config_dir is not None
+#     ugly way of retrieving postgres cfg file
+#     """
+#     assert db_name is not None
+#     assert cfg_file is not None
+#     assert config_dir is not None
 
-    # take from secrets dur if running in production: kubernetes
-    releaseMode = os.environ.get("RELEASE_MODE", "DEVELOPMENT")
-    cfgPath = (
-        Path(config_dir.__file__).with_name(cfg_file)
-        if releaseMode == "DEVELOPMENT"
-        else Path("/run/secrets") / cfg_file
-        # else Path("/run/secrets") / cfg_file / "secret.file"
-    )
+#     # take from secrets dur if running in production: kubernetes
+#     releaseMode = os.environ.get("RELEASE_MODE", "DEVELOPMENT")
+#     cfgPath = (
+#         Path(config_dir.__file__).with_name(cfg_file)
+#         if releaseMode == "DEVELOPMENT"
+#         else Path("/run/secrets") / cfg_file
+#         # else Path("/run/secrets") / cfg_file / "secret.file"
+#     )
 
-    parser = configparser.ConfigParser()
-    parser.read(cfgPath)
-    assert "psql" in parser, f"'psql' not in {cfgPath=}"
-    psql = AttrDict(parser["psql"])
+#     parser = configparser.ConfigParser()
+#     parser.read(cfgPath)
+#     assert "psql" in parser, f"'psql' not in {cfgPath=}"
+#     psql = AttrDict(parser["psql"])
 
-    # do not overwrite existing other db
-    if starts_with:
-        assert psql["db"].startswith(db_name)
-    else:
-        assert psql["db"] == db_name
+#     # do not overwrite existing other db
+#     if starts_with:
+#         assert psql["db"].startswith(db_name)
+#     else:
+#         assert psql["db"] == db_name
 
-    return psql
+#     return psql
 
 
 class UtilityBase:
@@ -85,15 +86,15 @@ class UtilityBase:
         }
 
 
-async def async_main(psql, base, force=False, dropFirst=False) -> None:
+async def async_main(psql: psqlConfig, base, force=False, dropFirst=False) -> None:
     """Create async engine for sqlalchemy."""
-    port = getattr(psql, "port", 5432)
+    # port = getattr(psql, "port", 5432)
     engine = create_async_engine(
-        f"postgresql+asyncpg://{psql.user}:{psql.passwd}@{psql.host}:{port}/{psql.db}",
+        f"postgresql+asyncpg://{psql.PG_USER}:{psql.PG_PASSWD}@{psql.PG_HOST}:{psql.PG_PORT}/{psql.PG_DB}",
         echo=True,
     )
 
-    print(f"{psql.db=} {psql.host=} {psql.port=}")
+    print(f"{psql=}")
     # TO-DO: make sure to check for a backup file first, as it deletes all psql data
     if dropFirst:
         if not force:
@@ -115,18 +116,19 @@ async def async_main(psql, base, force=False, dropFirst=False) -> None:
         await conn.run_sync(base.metadata.create_all)
 
 
-def fmt_connection_url(psql: AttrDict, async_=False) -> str:
+def fmt_connection_url(psql: psqlConfig, async_=False) -> str:
     """Format connection url."""
-    pghost = os.environ.get("POSTGRES_HOST", psql.host)
-    pgport = os.environ.get("POSTGRES_PORT", psql.port) or 5432
+    # pghost = os.environ.get("POSTGRES_HOST", psql.host)
+    # pgport = os.environ.get("POSTGRES_PORT", psql.port) or 5432
+
     pfx = "postgresql"
     if async_:
         pfx += "+asyncpg"
 
-    return f"{pfx}://{psql.user}:{psql.passwd}@{pghost}:{pgport}/{psql.db}"
+    return f"{pfx}://{psql.PG_USER}:{psql.PG_PASSWD}@{psql.PG_HOST}:{psql.PG_PORT}/{psql.PG_DB}"
 
 
-def get_engine(psql: AttrDict, pool_size=20) -> Engine:
+def get_engine(psql: psqlConfig, pool_size=20) -> Engine:
     """Create engine."""
     # default config can be overriden by passing pg host env var
 
@@ -143,7 +145,7 @@ def get_engine(psql: AttrDict, pool_size=20) -> Engine:
     return engine
 
 
-def get_session(psql: AttrDict, pool_size=20) -> sessionmaker:
+def get_session(psql: psqlConfig, pool_size=20) -> sessionmaker:
     """Create normal (bocking) connection."""
     engine = get_engine(psql, pool_size=pool_size)
 
@@ -155,7 +157,7 @@ def get_session(psql: AttrDict, pool_size=20) -> sessionmaker:
     return session
 
 
-def get_async_session(psql: AttrDict, pool_size=20) -> sessionmaker:
+def get_async_session(psql: psqlConfig, pool_size=20) -> sessionmaker:
     """Create async connection."""
     engine = create_async_engine(
         fmt_connection_url(psql, async_=True),
@@ -171,7 +173,7 @@ def get_async_session(psql: AttrDict, pool_size=20) -> sessionmaker:
 
 
 # Dependency
-def get_async_db(psql: AttrDict) -> Callable:
+def get_async_db(psql: psqlConfig) -> Callable:
     """Create async db."""
 
     async def make_db() -> AsyncGenerator:
@@ -224,7 +226,7 @@ def inject_str_attributes(parentInstance, itemDict, attrModel, session):
     return parentInstance
 
 
-async def aget_str_mappings(psql: AttrDict, models=None) -> Dict[str, Any]:
+async def aget_str_mappings(psql: psqlConfig, models=None) -> Dict[str, Any]:
     """Get string mappings asynchronously."""
     assert models is not None
 
@@ -419,6 +421,7 @@ async def add_many(
     instances = [i[0] for i in res]
 
     return {getattr(item, nameAttr): item for item in instances if item is not None}
+
 
 # TODO: rewrite and simplify
 async def create_many(
