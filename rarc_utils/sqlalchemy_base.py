@@ -217,11 +217,62 @@ def inject_str_attributes(parentInstance, itemDict, attrModel, session):
     attrModelName = attrModel.__table__.name
     attrName = attrModelName.lower() + "s"
     for attr in itemDict.get(attrName, []):
-        attr = session.merge(attrModel(name=attr))
+        # check if row exists
+        attr_instance = session.query(attrModel).filter_by(name=attr).first()
+        if attr_instance is None:
+            attr_instance = session.merge(attrModel(name=attr))
+
         if hasattr(parentInstance, attrName):
-            setattr(parentInstance, attrName, [attr])
+            setattr(parentInstance, attrName, [attr_instance])
         else:
-            getattr(parentInstance, attrName).append(attr)
+            getattr(parentInstance, attrName).append(attr_instance)
+
+    return parentInstance
+
+
+async def ainject_str_attributes(parentInstance, itemDict, attrModel, asession):
+    """Inject string attributes for a model instance.
+
+    Example:
+        book.genres = ['genre1', 'fiction', 'fantasy']
+        book = inject_str_attributes(book, Genre)
+        book.genres
+        # [Genre(name=genre1), Genre(name=fiction), Genre(name=fantasy)]
+    """
+    # assert hasattr(parentInstance, attrName)
+    assert set([c.name for c in attrModel.__table__.columns]) == set(
+        ["id", "name"]
+    ), "only works for attr models with columns `id` and `name`: str"
+    attrModelName = attrModel.__table__.name
+    attrName = attrModelName.lower() + "s"
+
+    async with asession() as session:
+        for i, attr in enumerate(itemDict.get(attrName, [])):
+            # check if row exists
+            query = select(attrModel).where(getattr(attrModel, "name") == attr)
+            # query = select(attrModel).filter_by(name=attr)
+            results = await session.execute(query)
+            attr_instance = results.fetchone()
+
+            # logger.info(f"{items=}")
+            # logger.info(f"{list(items)=}")
+            # attr_instance = await session.get(attrModel, attr)
+            # attr_instance = await session.query(attrModel).filter_by(name=attr).first()
+            if attr_instance is not None:
+                # logger.info(f"{attrModel} '{attr}' exists")
+                attr_instance = attr_instance[0]
+            else:
+                print(f"{attrName} {attr=} should be created")
+                attr_instance = await session.merge(attrModel(name=attr))
+
+            if i == 0:
+                setattr(parentInstance, attrName, [attr_instance])
+            else:
+                setattr(
+                    parentInstance,
+                    attrName,
+                    getattr(parentInstance, attrName) + [attr_instance],
+                )
 
     return parentInstance
 
@@ -288,7 +339,7 @@ def get_or_create(session: Session, model, item=None, filter_by=None, **kwargs):
 
 def get_one_or_create(
     session, model, create_method="", create_method_kwargs=None, **kwargs
-):
+) -> Tuple[Any, bool]:
     """Safer version of get_or_create.
 
     Does not commit, user should do this after the transaction.
@@ -334,7 +385,7 @@ async def aget_one_or_create(
             await session.rollback()
             q = select(model).filter_by(**kwargs)
             res = await session.execute(q)
-            return q.scalars().first(), False
+            return res.scalars().first(), False
 
 
 async def aget(
