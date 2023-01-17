@@ -37,7 +37,17 @@ def toEscapeMsg(msg: str) -> str:
     # .replace("*", "\\*") \
 
 
-def get_handler_docstrings(dp: Dispatcher, sortAlpha=True) -> Dict[str, str]:
+as_handler_dict_old = lambda command_handlers: {
+    ch.command[0]: ch.callback for ch in command_handlers
+}
+as_handler_dict_V20 = lambda command_handlers: {
+    list(ch.commands)[0]: ch.callback for ch in command_handlers
+}
+
+
+def get_handler_docstrings(
+    dp: Dispatcher, sortAlpha=True, as_handler_dict=as_handler_dict_V20
+) -> Dict[str, str]:
     """Create list of commands to show as menu.
 
     Install commands by talking to BotFather: /setcommands,
@@ -48,7 +58,7 @@ def get_handler_docstrings(dp: Dispatcher, sortAlpha=True) -> Dict[str, str]:
     command_handlers = [
         i for i in list(dp.handlers.values())[0] if isinstance(i, CommandHandler)
     ]
-    handler_dict = {ch.command[0]: ch.callback for ch in command_handlers}
+    handler_dict = as_handler_dict(command_handlers)
 
     if sortAlpha:
         handler_dict = OrderedDict(sorted(handler_dict.items()))
