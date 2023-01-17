@@ -101,7 +101,7 @@ def get_handler_docstrings(
     return descriptions_by_name
 
 
-def create_set_commands_string(dd: Dict[str, str]) -> str:
+def create_set_commands_string(dd: Dict[str, str], withSlash: bool = False) -> str:
     """Parse docstring_dict to a format BotFather can understand.
 
     Example:
@@ -116,6 +116,8 @@ def create_set_commands_string(dd: Dict[str, str]) -> str:
         print(create_set_commands_string(dd))
     """
     command_msgs: List[str] = [" - ".join(tpl) for tpl in list(dd.items())]
+    if withSlash:
+        command_msgs = ["/" + c for c in command_msgs]
 
     return "\n".join(command_msgs)
 
