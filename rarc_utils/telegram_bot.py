@@ -5,12 +5,11 @@ If this file gets larger, restructure it into a new package solely for Telegram 
 
 import logging
 from collections import OrderedDict
-from typing import Any, Dict, List, Sequence, TypeVar
+from typing import (Any, Callable, Dict, List, Optional, Sequence, TypeVar,
+                    Union)
 
-from telegram.ext import CommandHandler
+from telegram.ext import Application, CommandHandler
 
-# Dispatcher removed in bot v20?
-# from telegram.ext import Dispatcher
 Dispatcher = TypeVar("Dispatcher", bound=Any)
 
 
@@ -18,6 +17,14 @@ logger = logging.getLogger(__name__)
 
 
 class MissingDocstring(Exception):
+    """Docstring is missing for Telegram CommandHandler."""
+
+    pass
+
+
+class MessageNotFound(Exception):
+    """Telegram message not found in conversation."""
+
     pass
 
 
@@ -37,47 +44,61 @@ def toEscapeMsg(msg: str) -> str:
     # .replace("*", "\\*") \
 
 
-as_handler_dict_old = lambda command_handlers: {
-    ch.command[0]: ch.callback for ch in command_handlers
-}
-as_handler_dict_V20 = lambda command_handlers: {
-    list(ch.commands)[0]: ch.callback for ch in command_handlers
-}
+# def as_handler_dict_old(command_handlers: List[CommandHandler]) -> Dict[str, Callable]:
+#     return {ch.command[0]: ch.callback for ch in command_handlers}
+
+
+def as_handler_dict_V20(command_handlers: List[CommandHandler]) -> Dict[str, Callable]:
+    return {list(ch.commands)[0]: ch.callback for ch in command_handlers}
+
+
+def extract_description_from_callback(callback: Callable) -> str:
+    docstring: Optional[str] = callback.__doc__
+    if docstring is not None:
+        return str(docstring.split("\n")[0])
+    return ""
 
 
 def get_handler_docstrings(
-    dp: Dispatcher, sortAlpha=True, as_handler_dict=as_handler_dict_V20
+    app: Union[Application, Dispatcher],
+    sortAlpha: bool = True,
+    asHandlerDict: Callable[
+        [List[CommandHandler]], Dict[str, Callable]
+    ] = as_handler_dict_V20,
 ) -> Dict[str, str]:
     """Create list of commands to show as menu.
 
     Install commands by talking to BotFather: /setcommands,
     select bot and paste the returning string of this method
 
-    !!! Only uses first line of docstring, use pydocstring to enforce this as style guide.
+    ! Should be used with pydocstring, to make sure first docstring line contains description.
     """
-    command_handlers = [
-        i for i in list(dp.handlers.values())[0] if isinstance(i, CommandHandler)
+    command_handlers: List[CommandHandler] = [
+        i for i in list(app.handlers.values())[0] if isinstance(i, CommandHandler)
     ]
-    handler_dict = as_handler_dict(command_handlers)
+    handlers_by_name: Dict[str, Callable] = asHandlerDict(command_handlers)
 
     if sortAlpha:
-        handler_dict = OrderedDict(sorted(handler_dict.items()))
+        handlers_by_name = OrderedDict(sorted(handlers_by_name.items()))
 
-    missing_docstrings = [c for c, cb in handler_dict.items() if cb.__doc__ is None]
-    nmissing = len(missing_docstrings)
-
-    if nmissing > 0:
+    docstrings_by_callback_name: Dict[str, Optional[str]] = {
+        c: cb.__doc__ for c, cb in handlers_by_name.items()
+    }
+    missing_docstrings: List[str] = [
+        c for c, docstring in docstrings_by_callback_name.items() if docstring is None
+    ]
+    # raise when docstring is missing
+    if (nmissing := len(missing_docstrings)) > 0:
         raise MissingDocstring(
             f"docstrings missing for ({nmissing}): {missing_docstrings}"
         )
 
-    # warn user if docstring is missing
-    docstring_dict: Dict[str, str] = {
-        command: callback.__doc__.split("\n")[0]
-        for command, callback in handler_dict.items()
+    descriptions_by_name: Dict[str, str] = {
+        command: extract_description_from_callback(callback)
+        for command, callback in handlers_by_name.items()
     }
 
-    return docstring_dict
+    return descriptions_by_name
 
 
 def create_set_commands_string(dd: Dict[str, str]) -> str:
@@ -87,6 +108,7 @@ def create_set_commands_string(dd: Dict[str, str]) -> str:
         command1 - Description
         command2 - Another description
 
+    ----------------------------------
     Usage:
         from rarc_utils.telegram_bot import create_set_commands_string, get_handler_docstrings
         # dp = updater.dispatcher
@@ -98,18 +120,20 @@ def create_set_commands_string(dd: Dict[str, str]) -> str:
     return "\n".join(command_msgs)
 
 
-def delete_messages(dp: Dispatcher, messages: Sequence[Dict[str, Any]]) -> int:
-    """Delete messages, return number of succesful deletions."""
-    ret = []
+def delete_messages(
+    app: Application | Dispatcher, messages: Sequence[Dict[str, Any]]
+) -> int:
+    """Delete bot messages, return number of succesful deletions."""
+    ret: List[bool] = []
 
     for message in messages:
         try:
-            res = dp.bot.delete_message(
+            res: bool = app.bot.delete_message(
                 chat_id=message["chat_id"], message_id=message["message_id"]
             )
             ret.append(res)
         except Exception as e:
-            logger.error(f"cannot delete message. {e=!r}")
+            raise MessageNotFound from e
 
     return sum(ret)
 
