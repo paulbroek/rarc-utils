@@ -3,7 +3,6 @@ from setuptools import find_packages, setup
 
 requires = [
     "yapic.json",
-    "websockets",
     "pandas",
     "aioredis",
     "redis",
@@ -16,7 +15,7 @@ requires = [
     "python-json-logger",
     "lz4",
     "coloredlogs",
-    "fastapi0",
+    "fastapi",
     "asyncpg",
     "psycopg2",
     "requests",
