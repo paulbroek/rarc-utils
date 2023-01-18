@@ -24,7 +24,6 @@ class psqlConfig:
         fields = {
             k: "..." if k == psqlConfig.HIDDEN_FIELD else v for k, v in fields.items()
         }
-        print("I ran!")
         return str(fields)
 
 
