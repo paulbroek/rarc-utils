@@ -14,7 +14,7 @@ from collections import defaultdict
 from datetime import datetime
 from functools import partial, partialmethod
 from itertools import chain
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Final, List, Tuple
 
 import coloredlogs
 import lz4.frame
@@ -24,7 +24,16 @@ from humanfriendly.compat import coerce_string
 from humanfriendly.terminal import ansi_wrap
 from pythonjsonlogger import jsonlogger
 
-JSON_LOGS = "json_logs"
+JSON_LOGS: Final[str] = "json_logs"
+
+
+LOG_FMT: Final[
+    str
+] = "%(asctime)s - %(module)-16s - %(lineno)-4s - %(funcName)-20s - %(levelname)-7s - %(message)s"
+
+# LOG_FMT: Final[
+#     str
+# ] = "%(asctime)s - %(name)10s - %(funcName)-19s - %(levelname)6s - %(message)s"
 
 
 class MsgCountHandler(logging.Handler):
@@ -257,7 +266,7 @@ def setup_logger(
     saveFile=False,
     savePandas=False,
     addUrgent=1,
-    fmt="%(asctime)s - %(name)10s - %(funcName)-19s - %(levelname)6s - %(message)s",
+    fmt=LOG_FMT,
     jsonLogger=False,
     multiLine=False,
     msgWidth=80,
@@ -485,6 +494,3 @@ def setupCCXTTradeLogger(
     # stream_handler.setFormatter(formatter)
 
     return logger
-
-
-LOG_FMT: str = "%(asctime)s - %(module)-16s - %(lineno)-4s - %(funcName)-20s - %(levelname)-7s - %(message)s"
