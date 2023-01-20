@@ -3,6 +3,8 @@
 e.g.: creating async or blocking sessions, creating all models, getting all str models, get_or_create methods, ...
 """
 
+from __future__ import annotations
+
 import asyncio
 import configparser
 import inspect
@@ -12,58 +14,22 @@ import os
 from pathlib import Path
 from pprint import pprint
 from typing import (Any, AsyncGenerator, Callable, Dict, List, Optional, Set,
-                    Tuple, Union)
+                    Tuple, Type, Union)
 
 import numpy as np
 from fastapi import HTTPException
 from sqlalchemy import create_engine
-# from sqlalchemy import inspect as inspect_sqlalchemy
-# from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession  # type: ignore[import]
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.future import select  # type: ignore[import]
-from sqlalchemy.future.engine import Engine  # type: ignore[import]
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.future import select
+from sqlalchemy.future.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
-from tqdm import tqdm  # type: ignore[import]
+from tqdm import tqdm
 
-# from .misc import AttrDict
 from .models.psql_config import psqlConfig
 
 logger = logging.getLogger(__name__)
-
-
-# def load_config(db_name=None, cfg_file=None, config_dir=None, starts_with=False):
-#     """Load config.
-
-#     ugly way of retrieving postgres cfg file
-#     """
-#     assert db_name is not None
-#     assert cfg_file is not None
-#     assert config_dir is not None
-
-#     # take from secrets dur if running in production: kubernetes
-#     releaseMode = os.environ.get("RELEASE_MODE", "DEVELOPMENT")
-#     cfgPath = (
-#         Path(config_dir.__file__).with_name(cfg_file)
-#         if releaseMode == "DEVELOPMENT"
-#         else Path("/run/secrets") / cfg_file
-#         # else Path("/run/secrets") / cfg_file / "secret.file"
-#     )
-
-#     parser = configparser.ConfigParser()
-#     parser.read(cfgPath)
-#     assert "psql" in parser, f"'psql' not in {cfgPath=}"
-#     psql = AttrDict(parser["psql"])
-
-#     # do not overwrite existing other db
-#     if starts_with:
-#         assert psql["db"].startswith(db_name)
-#     else:
-#         assert psql["db"] == db_name
-
-#     return psql
 
 
 class UtilityBase:
@@ -85,17 +51,22 @@ class UtilityBase:
             if not c.startswith(("_", "__", "registry"))
         }
 
+    @classmethod
+    def from_json(cls, item: dict, session: Optional[Session] = None) -> __qualname__:
+        """Create instance from json dict."""
+        instance = cls(**item)
+        return instance
+
 
 async def async_main(psql: psqlConfig, base, force=False, dropFirst=False) -> None:
     """Create async engine for sqlalchemy."""
-    # port = getattr(psql, "port", 5432)
     engine = create_async_engine(
         f"postgresql+asyncpg://{psql.PG_USER}:{psql.PG_PASSWD}@{psql.PG_HOST}:{psql.PG_PORT}/{psql.PG_DB}",
         echo=True,
     )
 
     print(f"{psql=}")
-    # TO-DO: make sure to check for a backup file first, as it deletes all psql data
+    # TODO: check for a backup file first, as it deletes all psql data
     if dropFirst:
         if not force:
             if (
@@ -118,9 +89,6 @@ async def async_main(psql: psqlConfig, base, force=False, dropFirst=False) -> No
 
 def fmt_connection_url(psql: psqlConfig, async_=False) -> str:
     """Format connection url."""
-    # pghost = os.environ.get("POSTGRES_HOST", psql.host)
-    # pgport = os.environ.get("POSTGRES_PORT", psql.port) or 5432
-
     pfx = "postgresql"
     if async_:
         pfx += "+asyncpg"
@@ -153,6 +121,9 @@ def get_session(psql: psqlConfig, pool_size=20) -> sessionmaker:
         engine,
         expire_on_commit=False,
     )
+
+    # LOG or not?
+    # logger.info(f"connected to psql {str(psql)}")
 
     return session
 

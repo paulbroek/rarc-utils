@@ -105,6 +105,7 @@ def get_handler_docstrings(
 def create_set_commands_string(
     app: Union[Application, Dispatcher],
     withSlash: bool = False,
+    indent: bool = False,
 ) -> str:
     """Parse docstring_dict to a format BotFather can understand.
 
@@ -123,7 +124,7 @@ def create_set_commands_string(
     slash: str = "/" if withSlash else ""
     maxLen: int = max(len(name) for name in descriptions_by_name.keys())
     command_msgs: List[str] = [
-        f"{slash}{name:<{maxLen}} - {description}"
+        f"{slash}{name:<{maxLen if indent else 0}} - {description}"
         for name, description in descriptions_by_name.items()
     ]
 
