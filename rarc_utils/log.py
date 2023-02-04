@@ -259,6 +259,16 @@ def read_json_log_file(log_file: str) -> List[Dict[str, Any]]:
     return lines
 
 
+def get_create_logger(*args, **kwargs):
+    """Get or create logger instance."""
+    logger = logging.getLogger("root")
+    if not logger.handlers:
+        # logger = setup_logger(cmdLevel=logging.INFO, color=1)
+        logger = setup_logger(*args, **kwargs)
+
+    return logger
+
+
 def setup_logger(
     cmdLevel=logging.INFO,
     brokers=(),
