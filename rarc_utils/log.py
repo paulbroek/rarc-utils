@@ -263,7 +263,6 @@ def get_create_logger(*args, **kwargs):
     """Get or create logger instance."""
     logger = logging.getLogger("root")
     if not logger.handlers:
-        # logger = setup_logger(cmdLevel=logging.INFO, color=1)
         logger = setup_logger(*args, **kwargs)
 
     return logger
