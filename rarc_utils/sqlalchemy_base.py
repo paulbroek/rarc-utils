@@ -253,13 +253,13 @@ async def aget_str_mappings(psql: psqlConfig, models=None) -> Dict[str, Any]:
     assert models is not None
 
     # not much faster than blocking version below
-    async_sess = get_async_session(psql)
-    async with async_sess() as session:
+    async_session = get_async_session(psql)
+    async with async_session() as session:
         queries = {
             model.__tablename__: session.execute(select(model)) for model in models
         }
 
-        # str_mappings = {model.__tablename__: None for model in models}
+        logger.debug(f"{len(queries)=:,}")
 
         res = dict(zip(queries.keys(), await asyncio.gather(*queries.values())))
         str_mappings = {
@@ -435,7 +435,6 @@ async def add_many(
     items: Dict[Union[str, int], dict],
     nameAttr,
 ) -> Dict[str, Any]:
-
     # ugly: asyncio cannot handle so many coroutines
     cors = (aget_one_or_create(session, model, **item) for item in items.values())
 
@@ -523,7 +522,6 @@ async def create_many(
             logger.debug(f"{nbulk=}")
             disable = len(newItems) < bulksize
             for chunk in tqdm(np.array_split(newItems, nbulk), disable=disable):
-
                 session.add_all(list(chunk))
                 # session.bulk_save_objects(newItems) # not available for async sessions
                 if commit:
