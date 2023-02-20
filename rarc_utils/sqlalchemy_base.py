@@ -252,6 +252,8 @@ async def aget_str_mappings(psql: psqlConfig, models=None) -> Dict[str, Any]:
     """Get string mappings asynchronously."""
     assert models is not None
 
+    logger.debug(f"here")
+
     # not much faster than blocking version below
     async_session = get_async_session(psql)
     async with async_session() as session:
