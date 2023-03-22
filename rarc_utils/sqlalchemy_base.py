@@ -93,7 +93,8 @@ def fmt_connection_url(psql: psqlConfig, async_=False) -> str:
     if async_:
         pfx += "+asyncpg"
 
-    return f"{pfx}://{psql.PG_USER}:{psql.PG_PASSWD}@{psql.PG_HOST}:{psql.PG_PORT}/{psql.PG_DB}"
+    # return f"{pfx}://{psql.PG_USER}:{psql.PG_PASSWD}@{psql.PG_HOST}:{psql.PG_PORT}/{psql.PG_DB}"
+    return f"{pfx}://{psql.pg_user}:{psql.pg_passwd}@{psql.pg_host}:{psql.pg_port}/{psql.pg_db}"
 
 
 def get_engine(psql: psqlConfig, pool_size=20) -> Engine:
